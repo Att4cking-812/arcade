@@ -6,9 +6,15 @@
 <title>Мем-музей — Brickyard Arcade</title>
 <meta name="theme-color" content="#0a0d12">
 <meta name="description" content="Мем-музей Brickyard: коллекция экспонатов сервера. Вход бесплатный, руки не трогать.">
+<meta property="og:site_name" content="Brickyard Arcade">
 <meta property="og:title" content="Мем-музей Brickyard">
 <meta property="og:description" content="Семь экспонатов, которые лучше не понимать.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://att4cking-812.github.io/arcade/memes.html">
+<meta property="og:image" content="https://att4cking-812.github.io/arcade/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖼</text></svg>">
 <style>
   :root{
@@ -64,7 +70,7 @@
     transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease;
   }
   .exhibit:hover{transform:translateY(-6px); border-color:rgba(240,192,96,.42); box-shadow:0 24px 60px rgba(0,0,0,.5)}
-  .exhibit:focus-visible{outline:2px solid var(--gold); outline-offset:3px}
+  .exhibit:focus-within{outline:2px solid var(--gold); outline-offset:3px}
   .frame{
     position:relative; aspect-ratio:4/3; background:#f4efe4; border-radius:10px; padding:10px;
     display:grid; place-items:center; overflow:hidden; box-shadow:inset 0 0 30px rgba(0,0,0,.08);
@@ -82,7 +88,8 @@
   .tagrow{display:flex; gap:7px; flex-wrap:wrap; margin-top:12px}
   .tag{font-size:10px; letter-spacing:.5px; text-transform:uppercase; color:var(--muted);
        border:1px solid var(--line); padding:4px 9px; border-radius:99px}
-  .open-hint{display:inline-flex; align-items:center; gap:7px; margin-top:13px; color:var(--gold); font-size:12px; font-weight:700}
+  .open-hint{display:inline-flex; align-items:center; gap:7px; margin-top:13px; color:var(--gold); font-size:12px; font-weight:700;
+             background:none; border:0; padding:0; font-family:inherit; cursor:pointer; text-align:left}
   .open-hint::after{content:"↗"; transition:transform .2s}
   .exhibit:hover .open-hint::after{transform:translate(3px,-3px)}
 
@@ -247,11 +254,9 @@
 
   const gallery = document.getElementById('gallery');
   exhibits.forEach((item, i) => {
-    const card = document.createElement('button');
-    card.type = 'button';
+    const card = document.createElement('article');
     card.className = 'exhibit reveal';
     card.style.animationDelay = (i * 0.06) + 's';
-    card.setAttribute('aria-label', 'Открыть экспонат: ' + item.title);
     card.innerHTML = `
       <div class="frame">
         ${item.badge ? `<span class="badge">${item.badge}</span>` : ''}
@@ -262,7 +267,7 @@
         <h3>${item.title}</h3>
         <p>${item.text}</p>
         <div class="tagrow">${item.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
-        <div class="open-hint">Рассмотреть</div>
+        <button class="open-hint" type="button" aria-label="Рассмотреть: ${item.title}">Рассмотреть</button>
       </div>`;
     card.addEventListener('click', () => openLightbox(i));
     gallery.appendChild(card);
