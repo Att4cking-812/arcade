@@ -27,6 +27,7 @@
 - ⚔️ **Дуэли** — `/duel`, `/duel_stats`; кнопки, HP, криты, лечение и какашечный залп.
 - 🎬 **Киноклуб** — `/movie_add`, `/movie`, `/movie_list`, `/movie_vote`, `/movie_night`, `/movie_nights`, `/movie_watched`, `/movie_delete`, `/movie_night_cancel`.
 - 🏆 **Турниры** — `/tournament create|join|start|status|result|cancel`; сетка, bye-игроки и автоматическое продвижение победителей.
+- 🏚 **Бункер** — `/bunker create|join|start|status|card|end`; карточки в ЛС, обсуждение, голосование и выжившие.
 - 🎡 **Колесо** — `/wheel`, `/wheel_panel`, `/wheel_pick`.
 
 ## Фичи
