@@ -6,6 +6,7 @@ const ASSETS = [
   'minesweeper.html',
   '2048.html',
   'hangman.html',
+  'thanks.html',
   'leaderboard.js',
   'manifest.webmanifest',
   'icon-192.png',
