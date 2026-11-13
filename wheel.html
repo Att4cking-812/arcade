@@ -546,7 +546,10 @@
     let delta = targetNorm - currentNorm;
     if (delta < 0) delta += Math.PI * 2;
 
-    const extra = (5 + Math.random() * 3) * Math.PI * 2;
+    // Только целое число полных оборотов: иначе дробная часть сдвигает
+    // колесо после остановки и приз не совпадает со стрелкой.
+    const turns = 5 + Math.floor(Math.random() * 3);
+    const extra = turns * Math.PI * 2;
     const from = rotation;
     const to = rotation + extra + delta;
     const duration = config.duration + Math.random() * 700;
