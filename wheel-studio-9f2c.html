@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Панель ведущего — Brickyard</title>
+<meta name="theme-color" content="#0a0d12">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎛</text></svg>">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --cyan:#00d4ff; --gold:#f0c060; --pink:#ff3b6b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  [hidden]{display:none!important}
+  body{
+    min-height:100vh; color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(900px 500px at 12% -10%, rgba(155,89,182,.16), transparent 60%),
+      radial-gradient(800px 500px at 92% 0%, rgba(240,192,96,.10), transparent 55%),
+      var(--bg);
+    padding:28px 22px 54px;
+  }
+  .wrap{max-width:1180px; margin:0 auto}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:26px; flex-wrap:wrap}
+  .brand{display:flex; align-items:center; gap:12px}
+  .logo{
+    width:44px; height:44px; border-radius:13px; display:grid; place-items:center; font-size:22px;
+    background:linear-gradient(145deg,#2a2230,#0f1720); border:1px solid var(--line);
+    box-shadow:0 0 26px rgba(155,89,182,.22);
+  }
+  .brand h1{font-size:20px; letter-spacing:1.6px; font-weight:800}
+  .brand small{display:block; color:var(--muted); font-size:11px; letter-spacing:2.4px; margin-top:2px}
+  .links{display:flex; gap:9px; flex-wrap:wrap}
+  .btn{
+    text-decoration:none; color:var(--text); font:inherit; font-size:13px; padding:10px 14px; border-radius:10px;
+    border:1px solid var(--line); background:rgba(255,255,255,.02); transition:.2s; cursor:pointer;
+  }
+  .btn:hover{border-color:rgba(240,192,96,.5); transform:translateY(-2px)}
+
+  .grid{display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:20px; align-items:start}
+  .editor{display:flex; flex-direction:column; gap:18px; min-width:0}
+  .preview-col{display:flex; flex-direction:column; gap:16px; position:sticky; top:18px; min-width:0}
+  .panel{
+    background:linear-gradient(160deg,rgba(25,36,48,.92),rgba(11,16,22,.96));
+    border:1px solid var(--line); border-radius:16px; padding:20px;
+  }
+  .panel h2{font-size:15px; letter-spacing:.3px; margin-bottom:14px}
+  .panel h2 .num{color:var(--gold); margin-right:7px}
+  .hint{color:var(--muted); font-size:12px; line-height:1.55; margin-top:10px}
+
+  .tabs{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap}
+  .tab{
+    font:inherit; font-size:13px; color:var(--muted); padding:9px 14px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--line); background:rgba(255,255,255,.02); transition:.2s;
+  }
+  .tab:hover{color:var(--text)}
+  .tab.active{color:#191207; background:linear-gradient(135deg,#ffd978,#f0c060); border-color:transparent; font-weight:800}
+
+  .prize-list{display:flex; flex-direction:column; gap:8px}
+  .prize-row{
+    display:grid; grid-template-columns:42px minmax(0,1fr) 72px auto; gap:8px; align-items:center;
+    background:rgba(255,255,255,.02); border:1px solid var(--line); border-radius:10px; padding:8px;
+  }
+  .prize-row input[type="color"]{
+    width:38px; height:38px; padding:0; border:1px solid var(--line); border-radius:8px; background:none; cursor:pointer;
+  }
+  .prize-row input[type="text"], .prize-row input[type="number"]{
+    width:100%; font:inherit; font-size:13px; color:var(--text); background:#0d141b; border:1px solid var(--line);
+    border-radius:8px; padding:9px 10px; min-width:0;
+  }
+  .prize-row input:focus, .settings input:focus, .settings select:focus, textarea:focus{
+    outline:none; border-color:rgba(240,192,96,.6); box-shadow:0 0 0 3px rgba(240,192,96,.1);
+  }
+  .row-actions{display:flex; gap:4px}
+  .mini{
+    font:inherit; font-size:12px; width:30px; height:34px; display:grid; place-items:center; cursor:pointer;
+    color:var(--muted); background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:8px; transition:.15s;
+  }
+  .mini:hover{color:var(--text); border-color:rgba(255,255,255,.2)}
+  .mini.del:hover{color:var(--pink); border-color:rgba(255,59,107,.45)}
+
+  .add-row{display:flex; gap:9px; flex-wrap:wrap; margin-top:12px}
+  .add-row .btn{font-size:13px}
+  .primary{
+    font:inherit; font-size:14px; font-weight:800; color:#191207; border:0; cursor:pointer;
+    background:linear-gradient(135deg,#ffd978,#f0c060 55%,#d99a2b); border-radius:10px; padding:12px 18px;
+    box-shadow:0 8px 22px rgba(240,192,96,.2); transition:.18s;
+  }
+  .primary:hover{transform:translateY(-2px); box-shadow:0 12px 28px rgba(240,192,96,.3)}
+  .danger{color:var(--pink)!important; border-color:rgba(255,59,107,.3)!important}
+  .danger:hover{border-color:rgba(255,59,107,.6)!important}
+
+  textarea{
+    width:100%; min-height:190px; resize:vertical; font:inherit; font-size:13px; line-height:1.6; color:var(--text);
+    background:#0d141b; border:1px solid var(--line); border-radius:10px; padding:12px;
+  }
+  .people-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px; flex-wrap:wrap}
+  .count{color:var(--muted); font-size:12px}
+
+  .settings{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .field{display:flex; flex-direction:column; gap:6px; min-width:0}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:12px; color:var(--muted); letter-spacing:.3px}
+  .settings input[type="text"], .settings select{
+    width:100%; font:inherit; font-size:13px; color:var(--text); background:#0d141b; border:1px solid var(--line);
+    border-radius:9px; padding:10px 11px;
+  }
+  .range-row{display:flex; align-items:center; gap:10px}
+  .range-row input[type="range"]{flex:1; accent-color:var(--gold)}
+  .range-val{color:var(--gold); font-size:12px; font-weight:700; min-width:52px; text-align:right}
+  .check{display:flex; align-items:flex-start; gap:9px; color:#cdd9e5; font-size:13px; line-height:1.45; cursor:pointer}
+  .check input{margin-top:2px; accent-color:var(--gold)}
+
+  .preview-wrap{position:relative; width:100%; aspect-ratio:1; max-width:340px; margin:0 auto}
+  #preview{width:100%; height:100%; display:block}
+  .preview-note{text-align:center; color:var(--muted); font-size:12px; margin-top:10px; line-height:1.5}
+  .actions{display:flex; flex-direction:column; gap:9px}
+  .actions .btn{width:100%; text-align:center}
+  .actions .primary{width:100%}
+  .share-out{margin-top:4px; display:flex; flex-direction:column; gap:7px}
+  .share-out textarea{min-height:86px; font-size:11px; color:#cdd9e5}
+  .share-note{color:var(--muted); font-size:11px; line-height:1.5}
+  .save-status{color:var(--muted); font-size:11px; text-align:center; margin-top:2px}
+  .warn{font-size:12px; color:var(--muted); line-height:1.6; border-left:3px solid rgba(240,192,96,.5)}
+  .warn b{color:var(--gold)}
+
+  footer{margin-top:40px; padding-top:18px; border-top:1px solid var(--line);
+         display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+         color:var(--muted); font-size:12px}
+  footer a{color:var(--muted); text-decoration:none}
+  footer a:hover{color:var(--text)}
+
+  .lock{
+    position:fixed; inset:0; z-index:100; display:grid; place-items:center; padding:22px;
+    background:
+      radial-gradient(700px 500px at 50% 0%, rgba(155,89,182,.18), transparent 65%),
+      var(--bg);
+  }
+  .lock-card{
+    width:100%; max-width:420px; text-align:center; padding:34px 28px;
+    background:linear-gradient(160deg,rgba(25,36,48,.96),rgba(11,16,22,.98));
+    border:1px solid var(--line); border-radius:20px; box-shadow:0 30px 90px rgba(0,0,0,.6);
+  }
+  .lock-icon{font-size:40px; margin-bottom:12px}
+  .lock-card h1{font-size:22px; letter-spacing:1px; margin-bottom:8px}
+  .lock-card p{color:var(--muted); font-size:13px; line-height:1.6; margin-bottom:20px}
+  .lock-card form{display:flex; gap:8px}
+  .lock-card input{
+    flex:1; min-width:0; font:inherit; font-size:15px; letter-spacing:2px; color:var(--text);
+    background:#0d141b; border:1px solid var(--line); border-radius:10px; padding:13px 14px;
+  }
+  .lock-card input:focus{outline:none; border-color:rgba(240,192,96,.6); box-shadow:0 0 0 3px rgba(240,192,96,.1)}
+  .lock-card button{
+    font:inherit; font-size:14px; font-weight:800; color:#191207; border:0; border-radius:10px; padding:13px 20px;
+    background:linear-gradient(135deg,#ffd978,#f0c060); cursor:pointer;
+  }
+  .lock-msg{min-height:20px; margin-top:12px; color:var(--pink); font-size:12px}
+  .lock-back{display:inline-block; margin-top:16px; color:var(--muted); font-size:12px; text-decoration:none}
+  .lock-back:hover{color:var(--text)}
+  .shake{animation:shake .38s}
+  @keyframes shake{
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-9px)} 40%{transform:translateX(9px)}
+    60%{transform:translateX(-6px)} 80%{transform:translateX(6px)}
+  }
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translate(-50%,16px); opacity:0; pointer-events:none;
+    background:#1a2430; color:var(--text); border:1px solid rgba(240,192,96,.35); border-radius:12px;
+    padding:11px 18px; font-size:13px; box-shadow:0 16px 40px rgba(0,0,0,.5); transition:.25s; z-index:120;
+  }
+  .toast.show{opacity:1; transform:translate(-50%,0)}
+
+  @media (max-width:980px){
+    .grid{grid-template-columns:1fr}
+    .preview-col{position:static}
+    .settings{grid-template-columns:1fr}
+    .field.full{grid-column:auto}
+  }
+  @media (max-width:520px){
+    body{padding:20px 14px 40px}
+    .panel{padding:16px}
+    .prize-row{grid-template-columns:38px minmax(0,1fr) 64px; }
+    .prize-row .row-actions{grid-column:1/-1; justify-content:flex-end}
+  }
+</style>
+</head>
+<body>
+
+<div class="lock" id="lock">
+  <div class="lock-card" id="lockCard">
+    <div class="lock-icon">🔐</div>
+    <h1>Панель ведущего</h1>
+    <p>Введи PIN. Он есть у шогайне и Кирпича.</p>
+    <form id="pinForm" autocomplete="off">
+      <input id="pinInput" type="password" placeholder="PIN" autocomplete="current-password" autofocus>
+      <button type="submit">Войти</button>
+    </form>
+    <div class="lock-msg" id="lockMsg"></div>
+    <a class="lock-back" href="wheel.html">← К колесу</a>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <div class="logo">🎛</div>
+        <div>
+          <h1>ПАНЕЛЬ ВЕДУЩЕГО</h1>
+          <small>BRICKYARD · НАСТРОЙКА КОЛЕСА</small>
+        </div>
+      </div>
+      <div class="links">
+        <button class="btn" id="openBtnTop" type="button">🎡 Открыть колесо</button>
+        <button class="btn" id="logoutBtn" type="button">Выйти</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="editor">
+        <div class="panel">
+          <h2><span class="num">01</span>Что на колесе</h2>
+
+          <div class="tabs">
+            <button class="tab active" type="button" data-tab="prizes">🎁 Призы</button>
+            <button class="tab" type="button" data-tab="people">👥 Участники</button>
+          </div>
+
+          <div id="tab-prizes">
+            <div class="prize-list" id="prizeList"></div>
+            <div class="add-row">
+              <button class="btn" id="addPrizeBtn" type="button">＋ Добавить приз</button>
+            </div>
+            <div class="hint">Вес влияет на шанс: ×2 — приз выпадает в два раза чаще. Цвет можно менять.</div>
+            <div class="field full" style="margin-top:14px">
+              <label for="bulkPrizes">Вставить списком — по одному призу в строке</label>
+              <textarea id="bulkPrizes" placeholder="Пицца&#10;100 ₽&#10;Роль «Легенда»"></textarea>
+              <div class="add-row">
+                <button class="btn" id="bulkAddBtn" type="button">Добавить всё</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="tab-people" hidden>
+            <div class="people-head">
+              <span class="count" id="peopleCount">0 участников</span>
+              <button class="btn" id="shuffleBtn" type="button">🔀 Перемешать</button>
+            </div>
+            <textarea id="peopleInput" placeholder="шогайне&#10;Кирпич&#10;Пудж"></textarea>
+            <div class="hint">Один участник на строку. Можно вставить хоть весь список сервера.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2><span class="num">02</span>Настройки</h2>
+          <div class="settings">
+            <div class="field">
+              <label for="titleInput">Заголовок</label>
+              <input id="titleInput" type="text" maxlength="80" placeholder="Колесо фортуны">
+            </div>
+            <div class="field">
+              <label for="subtitleInput">Подпись</label>
+              <input id="subtitleInput" type="text" maxlength="80" placeholder="Brickyard · ивенты">
+            </div>
+            <div class="field">
+              <label for="modeSelect">Что показывать на колесе</label>
+              <select id="modeSelect">
+                <option value="prizes">🎁 Призы</option>
+                <option value="people">👥 Участники</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="durationInput">Длительность вращения</label>
+              <div class="range-row">
+                <input id="durationInput" type="range" min="3" max="10" step="0.5" value="6">
+                <span class="range-val" id="durationLabel">6 сек</span>
+              </div>
+            </div>
+            <label class="check field full"><input id="showSpin" type="checkbox"> Показывать кнопку «Крутить» зрителям</label>
+            <label class="check field full"><input id="soundDefault" type="checkbox"> Звук по умолчанию</label>
+          </div>
+        </div>
+      </section>
+
+      <aside class="preview-col">
+        <div class="panel">
+          <h2>Предпросмотр</h2>
+          <div class="preview-wrap">
+            <canvas id="preview" width="600" height="600"></canvas>
+          </div>
+          <div class="preview-note" id="previewNote">—</div>
+        </div>
+
+        <div class="panel actions">
+          <button class="primary" id="saveBtn" type="button">💾 Сохранить</button>
+          <button class="btn" id="openBtn" type="button">🎡 Открыть колесо</button>
+          <button class="btn" id="shareBtn" type="button">🔗 Ссылка для зрителей</button>
+          <div class="share-out" id="shareWrap" hidden>
+            <textarea id="shareOut" readonly></textarea>
+            <div class="share-note" id="shareNote"></div>
+          </div>
+          <button class="btn" id="exportBtn" type="button">📤 Экспорт JSON</button>
+          <button class="btn" id="importBtn" type="button">📥 Импорт JSON</button>
+          <input type="file" id="importFile" accept="application/json,.json" hidden>
+          <button class="btn danger" id="resetBtn" type="button">♻️ Сбросить всё</button>
+          <div class="save-status" id="saveStatus">Сохранено в этом браузере</div>
+        </div>
+
+        <div class="panel warn">
+          <b>Про доступ:</b> PIN — это занавеска, а не сейф. Он прячет панель от случайных глаз, но страница статическая. Не кидай ссылку на неё в общий чат.
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <div>© Brickyard Arcade · панель ведущего</div>
+      <div><a href="wheel.html">колесо</a> · <a href="index.html">аркада</a> · <a href="https://att4cking-812.github.io/brickyard/">brickyard</a></div>
+    </footer>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const CONFIG_KEY = 'brickyard_wheel_config_v1';
+  const UNLOCK_KEY = 'brickyard_studio_unlocked_v1';
+
+  // SHA-256 от PIN "gryzt-kakashki-2026" (в нижнем регистре).
+  // Чтобы сменить PIN: посчитай SHA-256 от новой фразы и замени строку ниже.
+  const PIN_HASH = '480c2e8a29bb047847535de6f89595cef0ddfe8ed1a36588f88e2c645acdc26f';
+
+  const PALETTE = [
+    '#ff3b6b', '#f0c060', '#39ff88', '#00d4ff', '#ff8bd0', '#9b59b6',
+    '#ff9f43', '#54d1a2', '#e74c3c', '#3498db', '#f1c40f', '#1abc9c'
+  ];
+
+  const DEFAULT_CONFIG = {
+    title: 'Колесо фортуны',
+    subtitle: 'Brickyard · ивенты',
+    mode: 'prizes',
+    showSpin: true,
+    sound: true,
+    duration: 6000,
+    prizes: [
+      { label: '100 ₽', weight: 1, color: '#ff3b6b' },
+      { label: 'Роль «Легенда»', weight: 1, color: '#f0c060' },
+      { label: 'Пицца', weight: 1, color: '#39ff88' },
+      { label: 'Мут на 10 минут', weight: 1, color: '#00d4ff' },
+      { label: 'Поцелуй в щёчку', weight: 1, color: '#ff8bd0' },
+      { label: 'Ничего 💩', weight: 1, color: '#7c8b9a' }
+    ],
+    people: ['шогайне', 'Кирпич', 'Пёс', 'Пудж', 'Камина', 'Демон']
+  };
+
+  let config = null;
+  let inited = false;
+  let saveTimer = null;
+  let toastTimer = null;
+  let lockUntil = 0;
+
+  function validColor(c) {
+    return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+  }
+
+  function clone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+
+  function sanitizeConfig(raw) {
+    const c = raw && typeof raw === 'object' ? raw : {};
+    const prizes = (Array.isArray(c.prizes) ? c.prizes : []).map((p, i) => ({
+      label: String((p && p.label) || '').trim().slice(0, 80),
+      weight: Math.max(0.1, Math.min(100, Number(p && p.weight) || 1)),
+      color: validColor(p && p.color) ? p.color : PALETTE[i % PALETTE.length]
+    })).filter(p => p.label).slice(0, 40);
+
+    const people = (Array.isArray(c.people) ? c.people : [])
+      .map(p => String(p || '').trim().slice(0, 40))
+      .filter(Boolean)
+      .slice(0, 40);
+
+    return {
+      title: String(c.title || '').trim().slice(0, 80) || DEFAULT_CONFIG.title,
+      subtitle: String(c.subtitle || '').trim().slice(0, 80) || DEFAULT_CONFIG.subtitle,
+      mode: c.mode === 'people' ? 'people' : 'prizes',
+      showSpin: c.showSpin !== false,
+      sound: c.sound !== false,
+      duration: Math.max(3000, Math.min(10000, Number(c.duration) || 6000)),
+      prizes,
+      people
+    };
+  }
+
+  function loadConfig() {
+    try {
+      const raw = localStorage.getItem(CONFIG_KEY);
+      if (raw) return sanitizeConfig(JSON.parse(raw));
+    } catch {}
+    return sanitizeConfig(clone(DEFAULT_CONFIG));
+  }
+
+  function saveConfig(silent) {
+    // В памяти оставляем то, что сейчас в форме: иначе пустое поле нового приза
+    // исчезнет из модели и индексы строк разъедутся. В localStorage пишем чистую версию.
+    const clean = sanitizeConfig(config);
+    try {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(clean));
+    } catch {}
+    $('saveStatus').textContent = silent ? 'Сохранено автоматически' : 'Сохранено только что';
+    drawPreview();
+  }
+
+  function scheduleSave() {
+    $('saveStatus').textContent = 'Сохраняю…';
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      saveConfig(true);
+    }, 350);
+  }
+
+  function toast(message) {
+    const el = $('toast');
+    el.textContent = message;
+    el.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  /* ---------- редактор призов ---------- */
+
+  function renderPrizes() {
+    const list = $('prizeList');
+    list.textContent = '';
+
+    if (!config.prizes.length) {
+      const empty = document.createElement('div');
+      empty.className = 'hint';
+      empty.textContent = 'Пока пусто. Добавь хотя бы два приза.';
+      list.append(empty);
+      return;
+    }
+
+    config.prizes.forEach((prize, index) => {
+      const row = document.createElement('div');
+      row.className = 'prize-row';
+
+      const color = document.createElement('input');
+      color.type = 'color';
+      color.value = validColor(prize.color) ? prize.color : PALETTE[index % PALETTE.length];
+      color.dataset.index = String(index);
+      color.dataset.field = 'color';
+      color.title = 'Цвет сектора';
+
+      const label = document.createElement('input');
+      label.type = 'text';
+      label.value = prize.label;
+      label.placeholder = 'Название приза';
+      label.maxLength = 80;
+      label.dataset.index = String(index);
+      label.dataset.field = 'label';
+      label.setAttribute('aria-label', 'Название приза');
+
+      const weight = document.createElement('input');
+      weight.type = 'number';
+      weight.min = '0.1';
+      weight.max = '100';
+      weight.step = '0.1';
+      weight.value = String(prize.weight);
+      weight.dataset.index = String(index);
+      weight.dataset.field = 'weight';
+      weight.title = 'Вес (шанс)';
+      weight.setAttribute('aria-label', 'Вес приза');
+
+      const actions = document.createElement('div');
+      actions.className = 'row-actions';
+
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.className = 'mini';
+      up.textContent = '↑';
+      up.title = 'Выше';
+      up.dataset.action = 'up';
+      up.dataset.index = String(index);
+
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.className = 'mini';
+      down.textContent = '↓';
+      down.title = 'Ниже';
+      down.dataset.action = 'down';
+      down.dataset.index = String(index);
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'mini del';
+      del.textContent = '✕';
+      del.title = 'Удалить';
+      del.dataset.action = 'remove';
+      del.dataset.index = String(index);
+
+      actions.append(up, down, del);
+      row.append(color, label, weight, actions);
+      list.append(row);
+    });
+  }
+
+  function renderPeople() {
+    $('peopleInput').value = config.people.join('\n');
+    $('peopleCount').textContent = config.people.length + ' ' + plural(config.people.length, 'участник', 'участника', 'участников');
+  }
+
+  function plural(n, one, few, many) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+
+  function renderSettings() {
+    $('titleInput').value = config.title;
+    $('subtitleInput').value = config.subtitle;
+    $('modeSelect').value = config.mode;
+    $('durationInput').value = String(config.duration / 1000);
+    $('durationLabel').textContent = formatSeconds(config.duration / 1000);
+    $('showSpin').checked = config.showSpin;
+    $('soundDefault').checked = config.sound;
+  }
+
+  function formatSeconds(value) {
+    return (Math.round(value * 10) / 10).toString().replace('.', ',') + ' сек';
+  }
+
+  function renderAll() {
+    renderPrizes();
+    renderPeople();
+    renderSettings();
+    drawPreview();
+  }
+
+  /* ---------- предпросмотр ---------- */
+
+  const preview = $('preview');
+  const pctx = preview.getContext('2d');
+
+  function currentList() {
+    if (config.mode === 'people') {
+      return config.people.map((label, i) => ({
+        label,
+        weight: 1,
+        color: PALETTE[i % PALETTE.length]
+      }));
+    }
+    return config.prizes;
+  }
+
+  function buildSegments(list) {
+    const cleaned = list
+      .map((item, i) => ({
+        label: String(item.label || '').trim(),
+        weight: Math.max(0.1, Number(item.weight) || 1),
+        color: validColor(item.color) ? item.color : PALETTE[i % PALETTE.length]
+      }))
+      .filter(item => item.label);
+
+    if (!cleaned.length) return [];
+
+    const total = cleaned.reduce((sum, item) => sum + item.weight, 0);
+    let acc = 0;
+    return cleaned.map(item => {
+      const angle = (item.weight / total) * Math.PI * 2;
+      const seg = {
+        ...item,
+        angle,
+        start: acc,
+        end: acc + angle,
+        mid: acc + angle / 2
+      };
+      acc += angle;
+      return seg;
+    });
+  }
+
+  function previewTextColor(hex) {
+    const h = String(hex || '#000000').replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16) || 0;
+    const g = parseInt(h.slice(2, 4), 16) || 0;
+    const b = parseInt(h.slice(4, 6), 16) || 0;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#181209' : '#ffffff';
+  }
+
+  function previewFit(text, maxWidth) {
+    if (pctx.measureText(text).width <= maxWidth) return text;
+    let s = String(text);
+    while (s.length > 1 && pctx.measureText(s + '…').width > maxWidth) s = s.slice(0, -1);
+    return s + '…';
+  }
+
+  function drawPreview() {
+    const S = 600;
+    const cx = S / 2;
+    const cy = S / 2;
+    const R = 268;
+
+    pctx.clearRect(0, 0, S, S);
+    const segments = buildSegments(currentList());
+
+    if (segments.length < 2) {
+      pctx.beginPath();
+      pctx.arc(cx, cy, R, 0, Math.PI * 2);
+      pctx.fillStyle = '#0d131a';
+      pctx.fill();
+      pctx.strokeStyle = '#1e2b38';
+      pctx.lineWidth = 3;
+      pctx.stroke();
+      pctx.fillStyle = '#7c8b9a';
+      pctx.font = '600 22px "Segoe UI", system-ui, sans-serif';
+      pctx.textAlign = 'center';
+      pctx.textBaseline = 'middle';
+      pctx.fillText('Добавь минимум два сектора', cx, cy);
+      $('previewNote').textContent = config.mode === 'people'
+        ? 'В списке участников меньше двух человек.'
+        : 'В списке призов меньше двух штук.';
+      return;
+    }
+
+    pctx.beginPath();
+    pctx.arc(cx, cy, R + 10, 0, Math.PI * 2);
+    pctx.fillStyle = '#0d131a';
+    pctx.fill();
+
+    for (const seg of segments) {
+      pctx.beginPath();
+      pctx.moveTo(cx, cy);
+      pctx.arc(cx, cy, R, seg.start, seg.end);
+      pctx.closePath();
+      pctx.fillStyle = seg.color;
+      pctx.fill();
+    }
+
+    pctx.strokeStyle = 'rgba(10,13,18,.45)';
+    pctx.lineWidth = 2;
+    for (const seg of segments) {
+      pctx.beginPath();
+      pctx.moveTo(cx, cy);
+      pctx.lineTo(cx + Math.cos(seg.start) * R, cy + Math.sin(seg.start) * R);
+      pctx.stroke();
+    }
+
+    for (const seg of segments) {
+      if (seg.angle < 0.04) continue;
+      const fontSize = Math.max(11, Math.min(19, 340 / Math.max(6, segments.length)));
+      pctx.font = '700 ' + fontSize.toFixed(1) + 'px "Segoe UI", system-ui, sans-serif';
+      const text = previewFit(seg.label, R * 0.6);
+      pctx.save();
+      pctx.translate(cx, cy);
+      pctx.rotate(seg.mid);
+      pctx.textBaseline = 'middle';
+      pctx.fillStyle = previewTextColor(seg.color);
+      if (Math.cos(seg.mid) < 0) {
+        pctx.rotate(Math.PI);
+        pctx.textAlign = 'left';
+        pctx.fillText(text, -(R - 20), 0);
+      } else {
+        pctx.textAlign = 'right';
+        pctx.fillText(text, R - 20, 0);
+      }
+      pctx.restore();
+    }
+
+    pctx.beginPath();
+    pctx.arc(cx, cy, R, 0, Math.PI * 2);
+    pctx.strokeStyle = '#f0c060';
+    pctx.lineWidth = 3;
+    pctx.stroke();
+
+    pctx.beginPath();
+    pctx.moveTo(cx, cy - R + 8);
+    pctx.lineTo(cx - 15, cy - R - 26);
+    pctx.lineTo(cx + 15, cy - R - 26);
+    pctx.closePath();
+    pctx.fillStyle = '#f0c060';
+    pctx.fill();
+
+    $('previewNote').textContent =
+      (config.mode === 'people' ? 'Участники' : 'Призы') +
+      ' · ' + segments.length + ' ' + plural(segments.length, 'сектор', 'сектора', 'секторов');
+  }
+
+  /* ---------- ссылка для зрителей ---------- */
+
+  function b64url(text) {
+    const bytes = new TextEncoder().encode(text);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function buildShareLink() {
+    const url = new URL('wheel.html', location.href);
+    url.hash = 'w=' + b64url(JSON.stringify(sanitizeConfig(config)));
+    return url.toString();
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.append(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return ok;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  /* ---------- валидация ---------- */
+
+  function validateWheel() {
+    const list = config.mode === 'people' ? config.people : config.prizes.filter(p => String(p.label || '').trim());
+    if (list.length < 2) {
+      toast('Для колеса нужно минимум два сектора');
+      return false;
+    }
+    return true;
+  }
+
+  function openWheel() {
+    saveConfig(true);
+    if (!validateWheel()) return;
+    window.open(new URL('wheel.html', location.href).toString(), '_blank', 'noopener');
+  }
+
+  /* ---------- инициализация ---------- */
+
+  function initApp() {
+    if (inited) return;
+    inited = true;
+
+    config = loadConfig();
+    renderAll();
+
+    const prizeList = $('prizeList');
+
+    prizeList.addEventListener('input', (e) => {
+      const index = Number(e.target.dataset.index);
+      const field = e.target.dataset.field;
+      if (!Number.isInteger(index) || !field || !config.prizes[index]) return;
+      if (field === 'color') config.prizes[index].color = e.target.value;
+      else if (field === 'label') config.prizes[index].label = e.target.value;
+      else if (field === 'weight') {
+        config.prizes[index].weight = Math.max(0.1, Math.min(100, Number(e.target.value) || 1));
+      }
+      scheduleSave();
+      drawPreview();
+    });
+
+    prizeList.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const index = Number(btn.dataset.index);
+      const action = btn.dataset.action;
+      if (!Number.isInteger(index)) return;
+
+      if (action === 'up' && index > 0) {
+        [config.prizes[index - 1], config.prizes[index]] = [config.prizes[index], config.prizes[index - 1]];
+      } else if (action === 'down' && index < config.prizes.length - 1) {
+        [config.prizes[index + 1], config.prizes[index]] = [config.prizes[index], config.prizes[index + 1]];
+      } else if (action === 'remove') {
+        config.prizes.splice(index, 1);
+      } else {
+        return;
+      }
+
+      renderPrizes();
+      scheduleSave();
+      drawPreview();
+    });
+
+    $('addPrizeBtn').addEventListener('click', () => {
+      if (config.prizes.length >= 40) return toast('Больше 40 секторов не влезет');
+      config.prizes.push({
+        label: 'Новый приз',
+        weight: 1,
+        color: PALETTE[config.prizes.length % PALETTE.length]
+      });
+      renderPrizes();
+      scheduleSave();
+      drawPreview();
+      const rows = prizeList.querySelectorAll('.prize-row');
+      const last = rows[rows.length - 1];
+      if (last) {
+        const input = last.querySelector('input[data-field="label"]');
+        if (input) { input.focus(); input.select(); }
+      }
+    });
+
+    $('bulkAddBtn').addEventListener('click', () => {
+      const lines = $('bulkPrizes').value.split(/\n/).map(s => s.trim()).filter(Boolean);
+      if (!lines.length) return toast('Список пустой');
+      const free = 40 - config.prizes.length;
+      const add = lines.slice(0, Math.max(0, free));
+      for (const line of add) {
+        config.prizes.push({
+          label: line.slice(0, 80),
+          weight: 1,
+          color: PALETTE[config.prizes.length % PALETTE.length]
+        });
+      }
+      $('bulkPrizes').value = '';
+      renderPrizes();
+      scheduleSave();
+      drawPreview();
+      toast('Добавлено: ' + add.length);
+    });
+
+    $('peopleInput').addEventListener('input', (e) => {
+      config.people = e.target.value.split(/\n/).map(s => s.trim()).filter(Boolean).slice(0, 40);
+      $('peopleCount').textContent = config.people.length + ' ' + plural(config.people.length, 'участник', 'участника', 'участников');
+      scheduleSave();
+      drawPreview();
+    });
+
+    $('shuffleBtn').addEventListener('click', () => {
+      const arr = config.people.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      config.people = arr;
+      $('peopleInput').value = arr.join('\n');
+      $('peopleCount').textContent = arr.length + ' ' + plural(arr.length, 'участник', 'участника', 'участников');
+      scheduleSave();
+      drawPreview();
+    });
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const isPrizes = tab.dataset.tab === 'prizes';
+        $('tab-prizes').hidden = !isPrizes;
+        $('tab-people').hidden = isPrizes;
+      });
+    });
+
+    $('titleInput').addEventListener('input', (e) => { config.title = e.target.value; scheduleSave(); });
+    $('subtitleInput').addEventListener('input', (e) => { config.subtitle = e.target.value; scheduleSave(); });
+    $('modeSelect').addEventListener('change', (e) => {
+      config.mode = e.target.value === 'people' ? 'people' : 'prizes';
+      scheduleSave();
+      drawPreview();
+    });
+    $('durationInput').addEventListener('input', (e) => {
+      const sec = Number(e.target.value) || 6;
+      config.duration = Math.round(sec * 1000);
+      $('durationLabel').textContent = formatSeconds(sec);
+      scheduleSave();
+    });
+    $('showSpin').addEventListener('change', (e) => { config.showSpin = e.target.checked; scheduleSave(); });
+    $('soundDefault').addEventListener('change', (e) => { config.sound = e.target.checked; scheduleSave(); });
+
+    $('saveBtn').addEventListener('click', () => {
+      saveConfig(false);
+      toast('Сохранено');
+    });
+
+    $('openBtn').addEventListener('click', openWheel);
+    $('openBtnTop').addEventListener('click', openWheel);
+
+    $('shareBtn').addEventListener('click', async () => {
+      saveConfig(true);
+      if (!validateWheel()) return;
+      const link = buildShareLink();
+      $('shareWrap').hidden = false;
+      $('shareOut').value = link;
+      $('shareNote').textContent = 'Длина: ' + link.length + ' символов. ' +
+        (link.length > 1900
+          ? 'Discord может обрезать — лучше шарить экран.'
+          : 'Можно кидать в чат.');
+      const ok = await copyText(link);
+      toast(ok ? 'Ссылка скопирована' : 'Скопируй ссылку вручную');
+    });
+
+    $('exportBtn').addEventListener('click', () => {
+      saveConfig(true);
+      const json = JSON.stringify(sanitizeConfig(config), null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'brickyard-wheel.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      toast('JSON скачан');
+    });
+
+    $('importBtn').addEventListener('click', () => $('importFile').click());
+
+    $('importFile').addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        config = sanitizeConfig(parsed);
+        saveConfig(true);
+        renderAll();
+        toast('Импортировано');
+      } catch {
+        toast('Не получилось: плохой JSON');
+      }
+      e.target.value = '';
+    });
+
+    $('resetBtn').addEventListener('click', () => {
+      if (!confirm('Сбросить настройки колеса к стандартным?')) return;
+      config = sanitizeConfig(clone(DEFAULT_CONFIG));
+      saveConfig(true);
+      renderAll();
+      toast('Сброшено');
+    });
+
+    $('logoutBtn').addEventListener('click', () => {
+      try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+      location.reload();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      try { localStorage.setItem(CONFIG_KEY, JSON.stringify(sanitizeConfig(config))); } catch {}
+    });
+  }
+
+  /* ---------- вход по PIN ---------- */
+
+  async function sha256(text) {
+    const data = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function unlock() {
+    $('lock').hidden = true;
+    $('app').hidden = false;
+    initApp();
+  }
+
+  $('pinForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (Date.now() < lockUntil) return;
+
+    const input = $('pinInput');
+    const pin = input.value.trim().toLowerCase();
+    if (!pin) return;
+
+    if (!(window.crypto && crypto.subtle)) {
+      $('lockMsg').textContent = 'Этот браузер не умеет SHA-256. Открой через https или localhost.';
+      return;
+    }
+
+    try {
+      const hash = await sha256(pin);
+      if (hash === PIN_HASH) {
+        try { sessionStorage.setItem(UNLOCK_KEY, '1'); } catch {}
+        $('lockMsg').textContent = '';
+        unlock();
+      } else {
+        lockUntil = Date.now() + 1200;
+        $('lockMsg').textContent = 'Не тот PIN. Попробуй ещё.';
+        $('lockCard').classList.add('shake');
+        setTimeout(() => $('lockCard').classList.remove('shake'), 420);
+        input.value = '';
+        input.focus();
+      }
+    } catch {
+      $('lockMsg').textContent = 'Ошибка проверки. Открой через https или localhost.';
+    }
+  });
+
+  $('pinInput').addEventListener('input', () => { $('lockMsg').textContent = ''; });
+
+  try {
+    if (sessionStorage.getItem(UNLOCK_KEY) === '1') unlock();
+    else $('pinInput').focus();
+  } catch {
+    $('pinInput').focus();
+  }
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-const CACHE = 'arcade-v1';
+const CACHE = 'arcade-v2';
 const ASSETS = [
   './',
   'index.html',
@@ -7,10 +7,19 @@ const ASSETS = [
   '2048.html',
   'hangman.html',
   'thanks.html',
+  'memes.html',
+  'wheel.html',
   'leaderboard.js',
   'manifest.webmanifest',
   'icon-192.png',
-  'icon-512.png'
+  'icon-512.png',
+  'memes/dog.jpg',
+  'memes/lays.png',
+  'memes/pudge.png',
+  'memes/kamina.png',
+  'memes/kamina_v2.png',
+  'memes/kamina_v3.png',
+  'memes/demon.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -33,6 +42,12 @@ self.addEventListener('fetch', (e) => {
 
   const isPage = req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');
+
+  // Панель ведущего не кэшируем: она не должна оставаться в офлайне и в общем кэше.
+  if (req.url.includes('wheel-studio')) {
+    e.respondWith(fetch(req).catch(() => caches.match('index.html')));
+    return;
+  }
 
   if (isPage) {
     // сеть в приоритете, кэш — если офлайн

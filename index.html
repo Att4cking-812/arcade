@@ -6,9 +6,9 @@
 <title>Brickyard Arcade — мини-игры</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a0d12">
-<meta name="description" content="Три мини-игры в браузере: змейка, сапёр и 2048. Без установки, без рекламы.">
+<meta name="description" content="Мини-игры в браузере: змейка, сапёр, 2048 и виселица. Плюс колесо фортуны для ивентов и мем-музей. Без установки и рекламы.">
 <meta property="og:title" content="Brickyard Arcade">
-<meta property="og:description" content="Змейка, сапёр и 2048 — играй прямо в браузере.">
+<meta property="og:description" content="Змейка, сапёр, 2048, виселица, колесо фортуны и мем-музей — всё в браузере.">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹</text></svg>">
 <style>
@@ -95,6 +95,28 @@
   .mines .gicon{box-shadow:0 0 24px rgba(255,59,107,.16)}
   .g2048 .gicon{box-shadow:0 0 24px rgba(240,192,96,.18)}
 
+  .extras{margin-top:44px}
+  .extras h2{font-size:26px; letter-spacing:-.4px; margin-bottom:6px}
+  .extras .sub{color:var(--muted); font-size:14px; margin-bottom:16px}
+  .extras-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px}
+  .extra{
+    display:flex; gap:18px; align-items:flex-start; text-decoration:none; color:inherit;
+    background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95));
+    border:1px solid var(--line); border-radius:18px; padding:22px;
+    transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  }
+  .extra:hover{transform:translateY(-5px); border-color:rgba(240,192,96,.4); box-shadow:0 22px 54px rgba(0,0,0,.45)}
+  .extra .eicon{
+    width:56px; height:56px; flex:0 0 auto; border-radius:16px; display:grid; place-items:center; font-size:26px;
+    background:rgba(255,255,255,.04); border:1px solid var(--line);
+  }
+  .extra.wheel .eicon{box-shadow:0 0 24px rgba(240,192,96,.2)}
+  .extra.museum .eicon{box-shadow:0 0 24px rgba(255,59,107,.16)}
+  .extra h3{font-size:19px; margin-bottom:7px}
+  .extra p{color:var(--muted); font-size:13px; line-height:1.6}
+  .extra .play{margin-top:12px}
+  .extra:hover .play::after{transform:translateX(4px)}
+
   footer{margin-top:44px; padding-top:20px; border-top:1px solid var(--line);
          display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
          color:var(--muted); font-size:13px}
@@ -128,8 +150,8 @@
   </div>
 
   <div class="hero">
-    <h2>Скучно?<br><span>Вот четыре игры.</span></h2>
-    <p>Змейка, сапёр, 2048 и виселица. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
+    <h2>Скучно?<br><span>Вот четыре игры. И ещё кое-что.</span></h2>
+    <p>Змейка, сапёр, 2048 и виселица — плюс колесо фортуны для ивентов и мем-музей сервера. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
   </div>
 
   <div class="grid">
@@ -165,6 +187,29 @@
       <div class="play">Играть</div>
     </a>
   </div>
+
+  <section class="extras">
+    <h2>Ещё в аркаде</h2>
+    <div class="sub">Не только игры.</div>
+    <div class="extras-grid">
+      <a class="extra wheel reveal" href="wheel.html">
+        <div class="eicon">🎡</div>
+        <div>
+          <h3>Колесо фортуны</h3>
+          <p>Призы и участники для ивентов. Ведущий запускает — все смотрят и болеют.</p>
+          <div class="play">Открыть колесо</div>
+        </div>
+      </a>
+      <a class="extra museum reveal" href="memes.html">
+        <div class="eicon">🖼</div>
+        <div>
+          <h3>Мем-музей</h3>
+          <p>Семь экспонатов из личной коллекции сервера. Некоторые лучше не понимать.</p>
+          <div class="play">Зайти в музей</div>
+        </div>
+      </a>
+    </div>
+  </section>
 
   <section class="boards">
     <h2>Рекорды</h2>

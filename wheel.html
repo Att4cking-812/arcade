@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Колесо фортуны — Brickyard Arcade</title>
+<meta name="theme-color" content="#0a0d12">
+<meta name="description" content="Колесо фортуны Brickyard: призы и участники ивентов. Крутится на экране ведущего.">
+<meta property="og:title" content="Колесо фортуны Brickyard">
+<meta property="og:description" content="Крути и болей за свой приз.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎡</text></svg>">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --cyan:#00d4ff; --gold:#f0c060; --pink:#ff3b6b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    min-height:100vh; color:var(--text); font-family:"Segoe UI",system-ui,sans-serif; overflow-x:hidden;
+    background:
+      radial-gradient(900px 520px at 12% -10%, rgba(240,192,96,.16), transparent 60%),
+      radial-gradient(800px 500px at 92% 0%, rgba(255,59,107,.12), transparent 55%),
+      radial-gradient(700px 600px at 50% 110%, rgba(0,212,255,.08), transparent 60%),
+      var(--bg);
+    padding:30px 22px 54px;
+  }
+  .wrap{max-width:1180px; margin:0 auto}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:30px; flex-wrap:wrap}
+  .brand{display:flex; align-items:center; gap:12px; min-width:0}
+  .logo{
+    width:44px; height:44px; flex:0 0 auto; border-radius:13px; display:grid; place-items:center; font-size:22px;
+    background:linear-gradient(145deg,#2a2230,#0f1720); border:1px solid var(--line);
+    box-shadow:0 0 26px rgba(240,192,96,.2);
+  }
+  .brand-text{min-width:0}
+  .brand h1{font-size:20px; letter-spacing:2px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .brand small{display:block; color:var(--muted); font-size:11px; letter-spacing:2.5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .links{display:flex; gap:9px; flex-wrap:wrap}
+  .btn{
+    text-decoration:none; color:var(--text); font:inherit; font-size:13px; padding:10px 14px; border-radius:10px;
+    border:1px solid var(--line); background:rgba(255,255,255,.02); transition:.2s; cursor:pointer;
+  }
+  .btn:hover{border-color:rgba(240,192,96,.5); transform:translateY(-2px)}
+
+  .layout{display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:28px; align-items:start}
+  .stage{min-width:0; display:flex; flex-direction:column; align-items:center}
+  .wheel-wrap{
+    position:relative; width:100%; max-width:660px; aspect-ratio:1; margin:0 auto;
+    filter:drop-shadow(0 30px 70px rgba(0,0,0,.55));
+  }
+  #wheel{width:100%; height:100%; display:block}
+  .pointer{
+    position:absolute; top:-2px; left:50%; transform:translateX(-50%); width:0; height:0; z-index:3;
+    border-left:17px solid transparent; border-right:17px solid transparent; border-top:30px solid var(--gold);
+    filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));
+  }
+  .pointer::after{
+    content:""; position:absolute; left:-5px; top:-8px; width:10px; height:10px; border-radius:50%;
+    background:var(--gold); box-shadow:0 0 14px rgba(240,192,96,.8);
+  }
+  .hub{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:19%; height:19%;
+    border-radius:50%; display:grid; place-items:center; font-size:clamp(20px,4vw,38px); z-index:2;
+    background:radial-gradient(circle at 35% 30%, #2b2433, #0c1117 70%);
+    border:2px solid rgba(240,192,96,.55); box-shadow:0 0 30px rgba(240,192,96,.22), inset 0 0 24px rgba(0,0,0,.6);
+  }
+  .winner{
+    width:100%; max-width:660px; min-height:96px; margin-top:20px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:5px;
+    opacity:0; transform:translateY(12px) scale(.98); transition:.3s ease; pointer-events:none;
+  }
+  .winner.show{opacity:1; transform:none}
+  .winner-kicker{font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted)}
+  .winner-label{
+    font-size:clamp(24px,4vw,42px); font-weight:900; letter-spacing:-.5px; line-height:1.1;
+    background:linear-gradient(100deg,var(--gold),var(--pink)); -webkit-background-clip:text; background-clip:text; color:transparent;
+    max-width:100%; overflow-wrap:anywhere;
+  }
+  .controls{display:flex; flex-direction:column; align-items:center; gap:9px; margin-top:6px}
+  .spin{
+    font:inherit; font-size:18px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; color:#191207;
+    padding:17px 58px; border:0; border-radius:999px; cursor:pointer;
+    background:linear-gradient(135deg,#ffd978,#f0c060 55%,#d99a2b);
+    box-shadow:0 12px 32px rgba(240,192,96,.28), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+  }
+  .spin:hover:not(:disabled){transform:translateY(-3px) scale(1.02); box-shadow:0 18px 42px rgba(240,192,96,.4), inset 0 1px 0 rgba(255,255,255,.5)}
+  .spin:active:not(:disabled){transform:translateY(0) scale(.99)}
+  .spin:disabled{cursor:not-allowed; filter:grayscale(.35) brightness(.8)}
+  .hint{color:var(--muted); font-size:12px; letter-spacing:.4px}
+
+  .side{display:flex; flex-direction:column; gap:16px; min-width:0}
+  .panel{
+    background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95));
+    border:1px solid var(--line); border-radius:16px; padding:18px;
+  }
+  .panel-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px}
+  .panel h2{font-size:15px; letter-spacing:.3px}
+  .mode{
+    font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--gold);
+    border:1px solid rgba(240,192,96,.35); padding:4px 8px; border-radius:99px; white-space:nowrap;
+  }
+  .segments{list-style:none; display:flex; flex-direction:column; gap:2px; max-height:330px; overflow:auto; padding-right:2px}
+  .segments li{display:flex; align-items:center; gap:9px; padding:7px 4px; border-bottom:1px dashed rgba(255,255,255,.05); font-size:13px}
+  .segments li:last-child{border-bottom:0}
+  .dot{width:10px; height:10px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 8px currentColor}
+  .seg-label{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#cdd9e5}
+  .seg-weight{font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:99px; padding:1px 6px}
+  .history{list-style:none; display:flex; flex-direction:column; gap:6px; font-size:13px}
+  .history li{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:5px 2px; border-bottom:1px dashed rgba(255,255,255,.05)}
+  .history li:last-child{border-bottom:0}
+  .history li span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#cdd9e5}
+  .history time{color:var(--muted); font-size:11px; flex:0 0 auto}
+  .history .empty{color:var(--muted); font-style:italic}
+  .linkbtn{
+    font:inherit; font-size:11px; color:var(--muted); background:none; border:0; cursor:pointer; text-decoration:underline;
+    text-underline-offset:3px; padding:0;
+  }
+  .linkbtn:hover{color:var(--text)}
+  .note p{color:var(--muted); font-size:13px; line-height:1.65; margin-top:8px}
+  .note h2{margin-bottom:2px}
+
+  footer{margin-top:40px; padding-top:20px; border-top:1px solid var(--line);
+         display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+         color:var(--muted); font-size:13px}
+  footer a{color:var(--muted); text-decoration:none}
+  footer a:hover{color:var(--text)}
+
+  #confetti{position:fixed; inset:0; z-index:90; pointer-events:none}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    .side{max-width:660px; width:100%; margin:0 auto}
+    .spin{padding:15px 44px; font-size:16px}
+    .winner{min-height:80px}
+  }
+  @media (max-width:520px){
+    body{padding:20px 14px 40px}
+    .links{gap:6px}
+    .btn{font-size:12px; padding:8px 11px}
+    .panel{padding:15px}
+  }
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">🎡</div>
+      <div class="brand-text">
+        <h1 id="pageTitle">КОЛЕСО ФОРТУНЫ</h1>
+        <small id="pageSubtitle">BRICKYARD · ИВЕНТЫ</small>
+      </div>
+    </div>
+    <div class="links">
+      <button class="btn" id="soundBtn" type="button">🔊 Звук</button>
+      <button class="btn" id="fsBtn" type="button">⛶ Во весь экран</button>
+      <a class="btn" href="index.html">← В аркаду</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="wheel-wrap">
+        <canvas id="wheel"></canvas>
+        <div class="pointer" aria-hidden="true"></div>
+        <div class="hub" aria-hidden="true">🍷</div>
+      </div>
+
+      <div class="winner" id="winner" aria-live="polite">
+        <div class="winner-kicker" id="winnerKicker">Выпал приз</div>
+        <div class="winner-label" id="winnerLabel">—</div>
+      </div>
+
+      <div class="controls">
+        <button class="spin" id="spinBtn" type="button">Крутить</button>
+        <div class="hint" id="hint">Пробел — тоже крутит</div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>На колесе</h2>
+          <span class="mode" id="modeLabel">Призы</span>
+        </div>
+        <ul class="segments" id="segmentList"></ul>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Победители</h2>
+          <button class="linkbtn" id="clearHistory" type="button">очистить</button>
+        </div>
+        <ol class="history" id="history"></ol>
+      </section>
+
+      <section class="panel note">
+        <h2>Как это работает</h2>
+        <p>Ведущий настраивает призы и участников в отдельной панели. Зрителям достаточно этой страницы — колесо крутится на экране ведущего.</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    <div>© Brickyard Arcade · колесо работает на удачу</div>
+    <div><a href="index.html">аркада</a> · <a href="https://att4cking-812.github.io/brickyard/">brickyard</a> · <a href="https://discord.gg/nWAATWnnnJ">discord</a></div>
+  </footer>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const CONFIG_KEY = 'brickyard_wheel_config_v1';
+  const HISTORY_KEY = 'brickyard_wheel_history_v1';
+  const SOUND_KEY = 'brickyard_wheel_sound_v1';
+  const HISTORY_LIMIT = 8;
+
+  const PALETTE = [
+    '#ff3b6b', '#f0c060', '#39ff88', '#00d4ff', '#ff8bd0', '#9b59b6',
+    '#ff9f43', '#54d1a2', '#e74c3c', '#3498db', '#f1c40f', '#1abc9c'
+  ];
+
+  const DEFAULT_CONFIG = {
+    title: 'Колесо фортуны',
+    subtitle: 'Brickyard · ивенты',
+    mode: 'prizes',
+    showSpin: true,
+    sound: true,
+    duration: 6000,
+    prizes: [
+      { label: '100 ₽', weight: 1, color: '#ff3b6b' },
+      { label: 'Роль «Легенда»', weight: 1, color: '#f0c060' },
+      { label: 'Пицца', weight: 1, color: '#39ff88' },
+      { label: 'Мут на 10 минут', weight: 1, color: '#00d4ff' },
+      { label: 'Поцелуй в щёчку', weight: 1, color: '#ff8bd0' },
+      { label: 'Ничего 💩', weight: 1, color: '#7c8b9a' }
+    ],
+    people: ['шогайне', 'Кирпич', 'Пёс', 'Пудж', 'Камина', 'Демон']
+  };
+
+  let config = DEFAULT_CONFIG;
+  let segments = [];
+  let rotation = 0;
+  let spinning = false;
+  let soundOn = true;
+  let audioCtx = null;
+  let cssSize = 0;
+  let winnerTimer = null;
+  let particles = [];
+  let confettiRaf = null;
+
+  const canvas = $('wheel');
+  const ctx = canvas.getContext('2d');
+  const confettiCanvas = $('confetti');
+  const cctx = confettiCanvas.getContext('2d');
+
+  function norm(a) {
+    a %= Math.PI * 2;
+    return a < 0 ? a + Math.PI * 2 : a;
+  }
+
+  function validColor(c) {
+    return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+  }
+
+  function normalizeConfig(raw) {
+    const c = raw && typeof raw === 'object' ? raw : {};
+    const rawPrizes = Array.isArray(c.prizes) ? c.prizes : [];
+    const rawPeople = Array.isArray(c.people) ? c.people : [];
+
+    const prizes = rawPrizes.map((p, i) => {
+      if (typeof p === 'string') {
+        return { label: p.trim(), weight: 1, color: PALETTE[i % PALETTE.length] };
+      }
+      return {
+        label: String((p && p.label) || '').trim(),
+        weight: Math.max(0.1, Math.min(100, Number(p && p.weight) || 1)),
+        color: validColor(p && p.color) ? p.color : PALETTE[i % PALETTE.length]
+      };
+    }).filter(p => p.label).slice(0, 40);
+
+    const people = rawPeople
+      .map(p => String(p || '').trim())
+      .filter(Boolean)
+      .slice(0, 40);
+
+    return {
+      title: String(c.title || DEFAULT_CONFIG.title).slice(0, 80),
+      subtitle: String(c.subtitle || DEFAULT_CONFIG.subtitle).slice(0, 80),
+      mode: c.mode === 'people' ? 'people' : 'prizes',
+      showSpin: c.showSpin !== false,
+      sound: c.sound !== false,
+      duration: Math.max(3000, Math.min(10000, Number(c.duration) || 6000)),
+      prizes: prizes.length ? prizes : DEFAULT_CONFIG.prizes.map(p => ({ ...p })),
+      people: people.length ? people : DEFAULT_CONFIG.people.slice()
+    };
+  }
+
+  function decodeHashConfig() {
+    try {
+      const m = location.hash.match(/[#&]w=([^&]+)/);
+      if (!m) return null;
+      let s = m[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (s.length % 4) s += '=';
+      const bin = atob(s);
+      const bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
+    } catch (e) {
+      console.warn('Не смог прочитать конфиг из ссылки:', e);
+      return null;
+    }
+  }
+
+  function loadRawConfig() {
+    const fromHash = decodeHashConfig();
+    if (fromHash) return fromHash;
+    try {
+      const raw = localStorage.getItem(CONFIG_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return DEFAULT_CONFIG;
+  }
+
+  function loadSoundPref() {
+    try {
+      const raw = localStorage.getItem(SOUND_KEY);
+      if (raw === '1') return true;
+      if (raw === '0') return false;
+    } catch {}
+    return config.sound;
+  }
+
+  function buildSegments() {
+    const list = config.mode === 'people'
+      ? config.people.map((label, i) => ({ label, weight: 1, color: PALETTE[i % PALETTE.length] }))
+      : config.prizes;
+
+    const total = list.reduce((sum, item) => sum + Math.max(0.1, Number(item.weight) || 1), 0);
+    let acc = 0;
+    segments = list.map(item => {
+      const weight = Math.max(0.1, Number(item.weight) || 1);
+      const angle = (weight / total) * Math.PI * 2;
+      const seg = {
+        label: item.label,
+        color: item.color,
+        weight,
+        angle,
+        start: acc,
+        end: acc + angle,
+        mid: acc + angle / 2
+      };
+      acc += angle;
+      return seg;
+    });
+  }
+
+  function renderUI() {
+    document.title = config.title + ' — Brickyard Arcade';
+    $('pageTitle').textContent = config.title;
+    $('pageSubtitle').textContent = config.subtitle;
+    $('modeLabel').textContent = config.mode === 'people' ? 'Участники' : 'Призы';
+    $('spinBtn').style.display = config.showSpin ? '' : 'none';
+    $('hint').textContent = config.showSpin ? 'Пробел — тоже крутит' : 'Крутит ведущий';
+    $('spinBtn').disabled = segments.length < 2;
+    if (segments.length < 2) $('hint').textContent = 'Нужно хотя бы два сектора — настрой колесо в панели ведущего.';
+
+    const list = $('segmentList');
+    list.textContent = '';
+    for (const seg of segments) {
+      const li = document.createElement('li');
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = seg.color;
+      dot.style.color = seg.color;
+      const label = document.createElement('span');
+      label.className = 'seg-label';
+      label.textContent = seg.label;
+      li.append(dot, label);
+      if (seg.weight > 1.05) {
+        const weight = document.createElement('span');
+        weight.className = 'seg-weight';
+        weight.textContent = '×' + (Math.round(seg.weight * 10) / 10);
+        li.append(weight);
+      }
+      list.append(li);
+    }
+  }
+
+  function fitText(text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let s = String(text);
+    while (s.length > 1 && ctx.measureText(s + '…').width > maxWidth) s = s.slice(0, -1);
+    return s + '…';
+  }
+
+  function textColor(hex) {
+    const h = String(hex || '#000000').replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16) || 0;
+    const g = parseInt(h.slice(2, 4), 16) || 0;
+    const b = parseInt(h.slice(4, 6), 16) || 0;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#181209' : '#ffffff';
+  }
+
+  function draw() {
+    if (!cssSize || !segments.length) return;
+    const S = cssSize;
+    const cx = S / 2;
+    const cy = S / 2;
+    const R = S / 2 - 18;
+
+    ctx.clearRect(0, 0, S, S);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + 12, 0, Math.PI * 2);
+    ctx.fillStyle = '#0d131a';
+    ctx.fill();
+
+    for (const seg of segments) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, R, seg.start + rotation, seg.end + rotation);
+      ctx.closePath();
+      ctx.fillStyle = seg.color;
+      ctx.fill();
+    }
+
+    const depth = ctx.createRadialGradient(cx, cy, R * 0.15, cx, cy, R);
+    depth.addColorStop(0, 'rgba(255,255,255,.05)');
+    depth.addColorStop(0.72, 'rgba(0,0,0,0)');
+    depth.addColorStop(1, 'rgba(0,0,0,.32)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = depth;
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(10,13,18,.45)';
+    ctx.lineWidth = 2;
+    for (const seg of segments) {
+      const a = seg.start + rotation;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+      ctx.stroke();
+    }
+
+    for (const seg of segments) {
+      if (seg.angle < 0.035) continue;
+      const base = Math.max(10, Math.min(17, R / 26));
+      const fontSize = segments.length > 22 ? base * 0.78 : base;
+      ctx.font = '700 ' + fontSize.toFixed(1) + 'px "Segoe UI", system-ui, sans-serif';
+      const text = fitText(seg.label, R * 0.62);
+      const a = seg.mid + rotation;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(a);
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = textColor(seg.color);
+      ctx.shadowColor = 'rgba(0,0,0,.35)';
+      ctx.shadowBlur = 4;
+      if (Math.cos(a) < 0) {
+        ctx.rotate(Math.PI);
+        ctx.textAlign = 'left';
+        ctx.fillText(text, -(R - 22), 0);
+      } else {
+        ctx.textAlign = 'right';
+        ctx.fillText(text, R - 22, 0);
+      }
+      ctx.restore();
+    }
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = '#f0c060';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + 7, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(240,192,96,.25)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * Math.PI * 2 + rotation * 0.12;
+      const x = cx + Math.cos(a) * (R + 7);
+      const y = cy + Math.sin(a) * (R + 7);
+      ctx.beginPath();
+      ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = i % 2 ? '#f0c060' : '#ff3b6b';
+      ctx.fill();
+    }
+  }
+
+  function resize() {
+    const wrap = canvas.parentElement;
+    const rect = wrap.getBoundingClientRect();
+    const size = Math.max(240, Math.min(rect.width, rect.height || rect.width));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cssSize = size;
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function segmentAt(pointerAngle, rot) {
+    const local = norm(pointerAngle - rot);
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      if (local >= seg.start && local < seg.end) return i;
+    }
+    return segments.length - 1;
+  }
+
+  function pickWeightedIndex() {
+    const total = segments.reduce((sum, seg) => sum + seg.weight, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < segments.length; i++) {
+      r -= segments[i].weight;
+      if (r <= 0) return i;
+    }
+    return segments.length - 1;
+  }
+
+  function angleInsideSegment(index) {
+    const seg = segments[index];
+    const pad = Math.min(seg.angle * 0.18, 0.12);
+    const span = Math.max(0.001, seg.angle - pad * 2);
+    return seg.start + pad + Math.random() * span;
+  }
+
+  function spin() {
+    if (spinning || segments.length < 2) return;
+
+    $('winner').classList.remove('show');
+    ensureAudio();
+    rotation = norm(rotation);
+
+    const winnerIndex = pickWeightedIndex();
+    const landing = angleInsideSegment(winnerIndex);
+    const currentNorm = norm(rotation);
+    const targetNorm = norm(-Math.PI / 2 - landing);
+    let delta = targetNorm - currentNorm;
+    if (delta < 0) delta += Math.PI * 2;
+
+    const extra = (5 + Math.random() * 3) * Math.PI * 2;
+    const from = rotation;
+    const to = rotation + extra + delta;
+    const duration = config.duration + Math.random() * 700;
+    const start = performance.now();
+
+    spinning = true;
+    $('spinBtn').disabled = true;
+    $('spinBtn').textContent = 'Крутится…';
+
+    let lastIndex = segmentAt(-Math.PI / 2, from);
+
+    function frame(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 4);
+      rotation = from + (to - from) * eased;
+      draw();
+
+      const currentIndex = segmentAt(-Math.PI / 2, rotation);
+      if (currentIndex !== lastIndex) {
+        lastIndex = currentIndex;
+        playTick();
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+        return;
+      }
+
+      rotation = norm(to);
+      draw();
+      spinning = false;
+      $('spinBtn').disabled = false;
+      $('spinBtn').textContent = 'Крутить';
+      announceWinner(winnerIndex);
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  function announceWinner(index) {
+    const label = segments[index].label;
+    $('winnerKicker').textContent = config.mode === 'people' ? 'Победитель' : 'Выпал приз';
+    $('winnerLabel').textContent = label;
+    $('winner').classList.add('show');
+    playWin();
+    burstConfetti();
+    addHistory(label);
+    if (winnerTimer) clearTimeout(winnerTimer);
+    winnerTimer = setTimeout(() => $('winner').classList.remove('show'), 9000);
+  }
+
+  /* ---------- история ---------- */
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveHistory(items) {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items)); } catch {}
+  }
+
+  function addHistory(label) {
+    const items = loadHistory();
+    items.unshift({ label, mode: config.mode, time: Date.now() });
+    saveHistory(items.slice(0, 30));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = $('history');
+    list.textContent = '';
+    const items = loadHistory().slice(0, HISTORY_LIMIT);
+    if (!items.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'Пока пусто. Крути!';
+      list.append(li);
+      return;
+    }
+    for (const item of items) {
+      const li = document.createElement('li');
+      const label = document.createElement('span');
+      label.textContent = item.label;
+      const time = document.createElement('time');
+      time.dateTime = new Date(item.time).toISOString();
+      time.textContent = new Date(item.time).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      li.append(label, time);
+      list.append(li);
+    }
+  }
+
+  /* ---------- звук ---------- */
+
+  function ensureAudio() {
+    if (!soundOn) return null;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    } catch {
+      return null;
+    }
+  }
+
+  function tone(freq, dur, type, gain, delay) {
+    const ac = ensureAudio();
+    if (!ac) return;
+    const t0 = ac.currentTime + (delay || 0);
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g);
+    g.connect(ac.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.03);
+  }
+
+  function playTick() {
+    if (soundOn) tone(1100, 0.03, 'square', 0.012);
+  }
+
+  function playWin() {
+    if (!soundOn) return;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.22, 'triangle', 0.045, i * 0.11));
+  }
+
+  function updateSoundBtn() {
+    $('soundBtn').textContent = soundOn ? '🔊 Звук' : '🔇 Звук';
+  }
+
+  /* ---------- конфетти ---------- */
+
+  function resizeConfetti() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    confettiCanvas.width = Math.round(window.innerWidth * dpr);
+    confettiCanvas.height = Math.round(window.innerHeight * dpr);
+    confettiCanvas.style.width = window.innerWidth + 'px';
+    confettiCanvas.style.height = window.innerHeight + 'px';
+    cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function burstConfetti() {
+    const colors = ['#f0c060', '#ff3b6b', '#39ff88', '#00d4ff', '#ff8bd0', '#ffffff'];
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight * 0.42;
+
+    for (let i = 0; i < 170; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const speed = 3 + Math.random() * 9;
+      particles.push({
+        x: cx + (Math.random() - 0.5) * 90,
+        y: cy + (Math.random() - 0.5) * 40,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed - 4,
+        w: 5 + Math.random() * 7,
+        h: 3 + Math.random() * 6,
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.3,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1,
+        decay: 0.008 + Math.random() * 0.008
+      });
+    }
+
+    if (!confettiRaf) confettiRaf = requestAnimationFrame(confettiFrame);
+  }
+
+  function confettiFrame() {
+    cctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    particles = particles.filter(p => p.life > 0 && p.y < window.innerHeight + 60);
+
+    for (const p of particles) {
+      p.vy += 0.16;
+      p.vx *= 0.995;
+      p.vy *= 0.995;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      p.life -= p.decay;
+
+      cctx.save();
+      cctx.globalAlpha = Math.max(0, p.life);
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.rot);
+      cctx.fillStyle = p.color;
+      cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      cctx.restore();
+    }
+
+    if (particles.length) {
+      confettiRaf = requestAnimationFrame(confettiFrame);
+    } else {
+      confettiRaf = null;
+      cctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    }
+  }
+
+  /* ---------- события ---------- */
+
+  $('spinBtn').addEventListener('click', () => {
+    ensureAudio();
+    spin();
+  });
+
+  $('soundBtn').addEventListener('click', () => {
+    soundOn = !soundOn;
+    try { localStorage.setItem(SOUND_KEY, soundOn ? '1' : '0'); } catch {}
+    updateSoundBtn();
+    if (soundOn) {
+      ensureAudio();
+      tone(880, 0.08, 'sine', 0.03);
+    }
+  });
+
+  $('fsBtn').addEventListener('click', async () => {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch {}
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    $('fsBtn').textContent = document.fullscreenElement ? '⛶ Выйти' : '⛶ Во весь экран';
+  });
+
+  $('clearHistory').addEventListener('click', () => {
+    if (!loadHistory().length) return;
+    if (!confirm('Очистить историю победителей?')) return;
+    saveHistory([]);
+    renderHistory();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' || e.repeat) return;
+    const tag = ((e.target && e.target.tagName) || '').toLowerCase();
+    if (['input', 'textarea', 'button', 'select', 'a'].includes(tag)) return;
+    e.preventDefault();
+    ensureAudio();
+    spin();
+  });
+
+  window.addEventListener('resize', () => {
+    resize();
+    resizeConfetti();
+  });
+
+  /* ---------- старт ---------- */
+
+  config = normalizeConfig(loadRawConfig());
+  buildSegments();
+  soundOn = loadSoundPref();
+  renderUI();
+  renderHistory();
+  updateSoundBtn();
+  resizeConfetti();
+
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => resize()).observe(canvas.parentElement);
+  }
+  requestAnimationFrame(() => resize());
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
