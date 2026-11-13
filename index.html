@@ -85,6 +85,8 @@
          color:var(--muted); font-size:13px}
   footer a{color:var(--muted); text-decoration:none}
   footer a:hover{color:var(--text)}
+  #secretTrigger{cursor:pointer; transition:color .2s}
+  #secretTrigger:hover{color:var(--gold)}
 
   .reveal{opacity:0; transform:translateY(22px); animation:rise .6s forwards}
   .reveal:nth-child(2){animation-delay:.08s}
@@ -111,8 +113,8 @@
   </div>
 
   <div class="hero">
-    <h2>Три классики.<br><span>Ноль установки.</span></h2>
-    <p>Открывай и играй — всё работает прямо в браузере, рекорды сохраняются локально.</p>
+    <h2>Скучно?<br><span>Вот три игры.</span></h2>
+    <p>Змейка, сапёр и 2048. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
   </div>
 
   <div class="grid">
@@ -142,9 +144,16 @@
   </div>
 
   <footer>
-    <div>© Brickyard Arcade · сделано с 🍷</div>
+    <div id="secretTrigger">© Brickyard Arcade · сделано с 🍷</div>
     <div><a href="https://att4cking-812.github.io/brickyard/">brickyard</a> · <a href="https://discord.gg/nWAATWnnnJ">discord</a></div>
   </footer>
 </div>
+
+<script>
+  const trigger = document.getElementById('secretTrigger');
+  if (trigger) trigger.addEventListener('click', () => {
+    window.location.href = 'minesweeper.html?secret=1';
+  });
+</script>
 </body>
 </html>
