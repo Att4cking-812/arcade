@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Сапёр — Brickyard Arcade</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a0d12">
 <style>
   :root{
     --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
@@ -156,6 +158,27 @@ const overlay = document.getElementById('overlay');
 const ovTitle = document.getElementById('ovTitle');
 const ovText = document.getElementById('ovText');
 
+// ---------- звук ----------
+let actx = null;
+function snd(freq, dur, type, vol, when) {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime + (when || 0);
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.08, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.08));
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + (dur || 0.08) + 0.02);
+  } catch (e) {}
+}
+const sfxClick = () => snd(520, .05, 'sine', .05);
+const sfxFlag  = () => snd(880, .06, 'triangle', .06);
+const sfxBoom  = () => { snd(160, .18, 'sawtooth', .14); snd(90, .3, 'sawtooth', .12, .1); };
+const sfxWin   = () => { snd(660, .09, 'triangle', .1); snd(880, .09, 'triangle', .1, .09); snd(1320, .18, 'triangle', .1, .18); };
+
 function newGame() {
   stopTimer();
   timer = 0; timerEl.textContent = '0:00';
@@ -232,6 +255,8 @@ function openCell(x, y) {
   const c = grid[y][x];
   if (!c || c.open || c.flag || dead || won) return;
 
+  sfxClick();
+
   if (!started) {
     started = true;
     plantMines(x, y);
@@ -242,6 +267,7 @@ function openCell(x, y) {
     c.open = true;
     dead = true;
     stopTimer();
+    sfxBoom();
     revealAll();
     finish('Взрыв!', 'Ты наступил на мину.');
     return;
@@ -274,6 +300,7 @@ function toggleFlag(x, y) {
   flags += c.flag ? 1 : -1;
   flagsEl.textContent = flags;
   minesLeftEl.textContent = Math.max(0, cfg.mines - flags);
+  sfxFlag();
   render();
 }
 
@@ -282,9 +309,13 @@ function checkWin() {
   if (openedCount === total - cfg.mines) {
     won = true;
     stopTimer();
+    sfxWin();
     gotWin();
     revealAll();
     finish('Победа!', `Все мины найдены за ${fmtTime(timer)}.`);
+    if (typeof lbSubmit === 'function') {
+      try { lbSubmit('mines', lbName(), Math.max(10, 600 - timer * 3)); } catch (e) {}
+    }
   }
 }
 
@@ -369,5 +400,7 @@ if (params.has('secret')) {
   newGame();
 }
 </script>
+<script src="leaderboard.js"></script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}</script>
 </body>
 </html>
