@@ -1,11 +1,11 @@
 {
   "name": "Brickyard Arcade",
   "short_name": "Arcade",
-  "description": "Мини-игры в браузере: змейка, сапёр, 2048 и виселица",
+  "description": "Мини-игры в браузере: змейка, сапёр, 2048, виселица, тетрис и морской бой. Плюс колесо фортуны, турниры и мем-музей.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#0a0d12",
   "theme_color": "#0a0d12",
   "lang": "ru",
