@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сапёр — Brickyard Arcade</title>
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --danger:#ff3b6b; --gold:#f0c060;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    background:radial-gradient(1000px 600px at 50% -10%, #16324a 0%, transparent 60%),
+               radial-gradient(800px 500px at 100% 100%, #2a1430 0%, transparent 55%), var(--bg);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .wrap{width:min(720px,100%); text-align:center}
+  .top{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px}
+  .back{color:var(--muted); text-decoration:none; font-size:14px; border:1px solid var(--line); padding:8px 14px; border-radius:10px; transition:.2s}
+  .back:hover{color:var(--text); border-color:rgba(57,255,136,.4)}
+  h1{margin:0; font-size:34px; letter-spacing:1px}
+  h1 span{color:var(--neon); text-shadow:0 0 18px rgba(57,255,136,.5)}
+  .bar{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:18px 0 16px}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 18px; min-width:96px}
+  .stat b{display:block; font-size:20px; color:var(--neon)}
+  .stat small{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px}
+  .board{
+    display:inline-grid; gap:4px; padding:12px; border-radius:16px;
+    background:linear-gradient(160deg,#0f1720,#0a1118); border:1px solid var(--line);
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+    user-select:none; -webkit-user-select:none;
+  }
+  .cell{
+    width:34px; height:34px; border-radius:7px; border:0; cursor:pointer;
+    background:linear-gradient(145deg,#22303d,#18222c);
+    color:#dfe9f2; font-weight:800; font-size:16px; display:grid; place-items:center;
+    transition:background .12s, transform .08s; padding:0;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .cell:hover{background:linear-gradient(145deg,#2b3d4d,#1f2c38)}
+  .cell:active{transform:scale(.96)}
+  .cell.open{background:#0d141b; box-shadow:inset 0 0 0 1px #1a2530; cursor:default}
+  .cell.open:hover{background:#0d141b}
+  .cell.mine{background:#3a1018; color:#ff8ba6}
+  .cell.flag{color:var(--gold); font-size:15px}
+  .cell.wrong{background:#3a1018; color:#ff8ba6}
+  .n1{color:#6fb3ff} .n2{color:#59f28f} .n3{color:#ff8ba6} .n4{color:#c58bff}
+  .n5{color:#ffb86b} .n6{color:#5ff2e0} .n7{color:#f0f0f0} .n8{color:#9aa7b4}
+  .btns{display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap}
+  button.ui{
+    padding:10px 20px; border-radius:10px; border:1px solid var(--line); cursor:pointer;
+    background:var(--panel); color:var(--text); font-size:14px; font-weight:600;
+  }
+  button.ui:hover{border-color:rgba(57,255,136,.4)}
+  button.primary{background:linear-gradient(180deg,#2dff8f,#12c96a); color:#052015; border:0; font-weight:800}
+  .seg{display:inline-flex; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  .seg button{background:none; border:0; color:var(--muted); padding:9px 14px; cursor:pointer; font-size:13px}
+  .seg button.on{background:rgba(57,255,136,.12); color:var(--neon)}
+  .hint{color:var(--muted); font-size:13px; margin-top:12px}
+  .overlay{
+    position:fixed; inset:0; background:rgba(5,8,12,.7); backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; z-index:10;
+  }
+  .overlay.show{display:flex}
+  .modal{background:linear-gradient(160deg,#121b25,#0e151d); border:1px solid var(--line); border-radius:18px; padding:28px 34px; text-align:center; max-width:340px}
+  .modal h2{margin:0 0 8px; font-size:28px}
+  .modal p{margin:0 0 18px; color:var(--muted); font-size:14px}
+  @media (max-width:520px){ .cell{width:29px;height:29px;font-size:14px} h1{font-size:26px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="index.html">← Аркада</a>
+    <h1>САП<span>ЁР</span></h1>
+    <div style="width:96px"></div>
+  </div>
+
+  <div class="bar">
+    <div class="stat"><b id="minesLeft">0</b><small>мин осталось</small></div>
+    <div class="stat"><b id="timer">0</b><small>секунд</small></div>
+    <div class="stat"><b id="flagsCount">0</b><small>флагов</small></div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="btns">
+    <div class="seg" id="levels">
+      <button data-level="easy" class="on">8×8 · 10</button>
+      <button data-level="medium">10×10 · 16</button>
+      <button data-level="hard">12×12 · 24</button>
+    </div>
+    <button class="ui primary" id="restart">Заново</button>
+  </div>
+
+  <div class="hint">ЛКМ — открыть · ПКМ — флажок · первый клик всегда безопасен</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="ovTitle">Победа!</h2>
+    <p id="ovText">Все мины найдены.</p>
+    <button class="ui primary" id="ovBtn">Ещё раз</button>
+  </div>
+</div>
+
+<script>
+const LEVELS = {
+  easy:   { cols: 8,  rows: 8,  mines: 10 },
+  medium: { cols: 10, rows: 10, mines: 16 },
+  hard:   { cols: 12, rows: 12, mines: 24 }
+};
+
+let level = 'easy';
+let cfg = LEVELS[level];
+let grid = [];          // {mine, open, flag, n}
+let started = false;
+let dead = false;
+let won = false;
+let flags = 0;
+let openedCount = 0;
+let timer = 0;
+let timerId = null;
+
+const boardEl = document.getElementById('board');
+const minesLeftEl = document.getElementById('minesLeft');
+const timerEl = document.getElementById('timer');
+const flagsEl = document.getElementById('flagsCount');
+const overlay = document.getElementById('overlay');
+const ovTitle = document.getElementById('ovTitle');
+const ovText = document.getElementById('ovText');
+
+function newGame() {
+  clearInterval(timerId);
+  timer = 0; timerEl.textContent = '0';
+  started = false; dead = false; won = false;
+  flags = 0; openedCount = 0;
+  flagsEl.textContent = '0';
+  minesLeftEl.textContent = cfg.mines;
+  overlay.classList.remove('show');
+
+  grid = [];
+  for (let y = 0; y < cfg.rows; y++) {
+    const row = [];
+    for (let x = 0; x < cfg.cols; x++) row.push({ mine: false, open: false, flag: false, n: 0 });
+    grid.push(row);
+  }
+  render();
+}
+
+function plantMines(safeX, safeY) {
+  const safe = new Set();
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      const nx = safeX + dx, ny = safeY + dy;
+      if (nx >= 0 && ny >= 0 && nx < cfg.cols && ny < cfg.rows) safe.add(nx + ',' + ny);
+    }
+
+  let placed = 0;
+  while (placed < cfg.mines) {
+    const x = Math.floor(Math.random() * cfg.cols);
+    const y = Math.floor(Math.random() * cfg.rows);
+    if (grid[y][x].mine || safe.has(x + ',' + y)) continue;
+    grid[y][x].mine = true;
+    placed++;
+  }
+
+  for (let y = 0; y < cfg.rows; y++)
+    for (let x = 0; x < cfg.cols; x++)
+      grid[y][x].n = countAround(x, y);
+}
+
+function countAround(x, y) {
+  let n = 0;
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < cfg.cols && ny < cfg.rows && grid[ny][nx].mine) n++;
+    }
+  return n;
+}
+
+function render() {
+  boardEl.style.gridTemplateColumns = `repeat(${cfg.cols}, 1fr)`;
+  boardEl.innerHTML = '';
+  for (let y = 0; y < cfg.rows; y++) {
+    for (let x = 0; x < cfg.cols; x++) {
+      const c = grid[y][x];
+      const b = document.createElement('button');
+      b.className = 'cell';
+      b.dataset.x = x; b.dataset.y = y;
+      if (c.open) {
+        b.classList.add('open');
+        if (c.mine) { b.classList.add('mine'); b.textContent = '💥'; }
+        else if (c.n > 0) { b.textContent = c.n; b.classList.add('n' + c.n); }
+      } else if (c.flag) {
+        b.classList.add('flag'); b.textContent = '🚩';
+      }
+      boardEl.appendChild(b);
+    }
+  }
+}
+
+function startTimer() {
+  if (timerId) return;
+  timerId = setInterval(() => { timer++; timerEl.textContent = timer; }, 1000);
+}
+
+function openCell(x, y) {
+  const c = grid[y][x];
+  if (!c || c.open || c.flag || dead || won) return;
+
+  if (!started) {
+    started = true;
+    plantMines(x, y);
+    startTimer();
+  }
+
+  if (c.mine) {
+    c.open = true;
+    dead = true;
+    clearInterval(timerId);
+    revealAll();
+    finish('Взрыв!', 'Ты наступил на мину.');
+    return;
+  }
+
+  flood(x, y);
+  render();
+  checkWin();
+}
+
+function flood(x, y) {
+  const c = grid[y][x];
+  if (!c || c.open || c.flag || c.mine) return;
+  c.open = true;
+  openedCount++;
+  if (c.n === 0) {
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < cfg.cols && ny < cfg.rows) flood(nx, ny);
+      }
+  }
+}
+
+function toggleFlag(x, y) {
+  const c = grid[y][x];
+  if (!c || c.open || dead || won) return;
+  c.flag = !c.flag;
+  flags += c.flag ? 1 : -1;
+  flagsEl.textContent = flags;
+  minesLeftEl.textContent = Math.max(0, cfg.mines - flags);
+  render();
+}
+
+function checkWin() {
+  const total = cfg.cols * cfg.rows;
+  if (openedCount === total - cfg.mines) {
+    won = true;
+    clearInterval(timerId);
+    gotWin();
+    revealAll();
+    finish('Победа!', `Все мины найдены за ${timer} сек.`);
+  }
+}
+
+function gotWin() {
+  try {
+    const key = 'mines_best_' + level;
+    const best = +(localStorage.getItem(key) || 0);
+    if (!best || timer < best) localStorage.setItem(key, timer);
+  } catch (e) {}
+}
+
+function revealAll() {
+  for (let y = 0; y < cfg.rows; y++)
+    for (let x = 0; x < cfg.cols; x++) {
+      const c = grid[y][x];
+      if (c.mine) c.open = true;
+    }
+  render();
+}
+
+function finish(title, text) {
+  ovTitle.textContent = title;
+  ovText.textContent = text;
+  overlay.classList.add('show');
+}
+
+boardEl.addEventListener('click', (e) => {
+  const b = e.target.closest('.cell');
+  if (!b) return;
+  openCell(+b.dataset.x, +b.dataset.y);
+});
+
+boardEl.addEventListener('contextmenu', (e) => {
+  const b = e.target.closest('.cell');
+  if (!b) return;
+  e.preventDefault();
+  toggleFlag(+b.dataset.x, +b.dataset.y);
+});
+
+// долгий тап — флажок
+let pressTimer = null;
+boardEl.addEventListener('touchstart', (e) => {
+  const b = e.target.closest('.cell');
+  if (!b) return;
+  pressTimer = setTimeout(() => {
+    toggleFlag(+b.dataset.x, +b.dataset.y);
+    pressTimer = null;
+  }, 420);
+}, { passive: true });
+boardEl.addEventListener('touchend', () => {
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+});
+boardEl.addEventListener('touchmove', () => {
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+});
+
+document.getElementById('levels').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-level]');
+  if (!b) return;
+  level = b.dataset.level;
+  cfg = LEVELS[level];
+  document.querySelectorAll('#levels button').forEach(x => x.classList.toggle('on', x === b));
+  newGame();
+});
+
+document.getElementById('restart').addEventListener('click', newGame);
+document.getElementById('ovBtn').addEventListener('click', newGame);
+
+newGame();
+</script>
+</body>
+</html>
