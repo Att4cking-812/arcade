@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>2048 — Brickyard Arcade</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a0d12">
 <style>
   :root{
     --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
@@ -117,6 +119,27 @@ const ovText = document.getElementById('ovText');
 try { best = +(localStorage.getItem('g2048_best') || 0); } catch (e) { best = 0; }
 bestEl.textContent = best;
 
+// ---------- звук ----------
+let actx = null;
+function snd(freq, dur, type, vol, when) {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime + (when || 0);
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.06, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.06));
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + (dur || 0.06) + 0.02);
+  } catch (e) {}
+}
+const sfxMove  = () => snd(320, .04, 'sine', .04);
+const sfxMerge = () => snd(720, .07, 'triangle', .07);
+const sfxWinS  = () => { snd(660,.09,'triangle',.1); snd(880,.09,'triangle',.1,.09); snd(1320,.18,'triangle',.1,.18); };
+const sfxLoseS = () => { snd(240,.15,'sawtooth',.1); snd(160,.25,'sawtooth',.1,.13); };
+
 function newGame() {
   board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
   score = 0; won = false; over = false; mergedCells = new Set();
@@ -213,6 +236,9 @@ function move(dir) {
 
   if (JSON.stringify(board) === before) return;
 
+  sfxMove();
+  if (gained > 0) sfxMerge();
+
   score += gained;
   if (score > best) {
     best = score;
@@ -225,9 +251,13 @@ function move(dir) {
 
   if (won) {
     won = false;
+    sfxWinS();
     ovTitle.textContent = 'Победа! 🎉';
     ovText.textContent = 'Ты собрал 2048. Можно продолжить.';
     overlay.classList.add('show');
+    if (typeof lbSubmit === 'function') {
+      try { lbSubmit('g2048', lbName(), score); } catch (e) {}
+    }
     return;
   }
   checkOver();
@@ -247,9 +277,13 @@ function canMove() {
 function checkOver() {
   if (canMove()) return;
   over = true;
+  sfxLoseS();
   ovTitle.textContent = 'Игра окончена';
   ovText.textContent = 'Ходов больше нет. Счёт: ' + score;
   overlay.classList.add('show');
+  if (typeof lbSubmit === 'function') {
+    try { lbSubmit('g2048', lbName(), score); } catch (e) {}
+  }
 }
 
 window.addEventListener('keydown', (e) => {
@@ -282,5 +316,7 @@ document.getElementById('ovContinue').addEventListener('click', () => {
 
 newGame();
 </script>
+<script src="leaderboard.js"></script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}</script>
 </body>
 </html>
