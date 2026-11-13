@@ -48,6 +48,8 @@
   .cell.wrong{background:#3a1018; color:#ff8ba6}
   .n1{color:#6fb3ff} .n2{color:#59f28f} .n3{color:#ff8ba6} .n4{color:#c58bff}
   .n5{color:#ffb86b} .n6{color:#5ff2e0} .n7{color:#f0f0f0} .n8{color:#9aa7b4}
+  .board.owner .cell{width:22px; height:22px; font-size:11px; border-radius:5px}
+  @media (max-width:600px){ .board.owner .cell{width:16px; height:16px; font-size:9px} }
   .btns{display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap}
   button.ui{
     padding:10px 20px; border-radius:10px; border:1px solid var(--line); cursor:pointer;
@@ -110,7 +112,8 @@
 const LEVELS = {
   easy:   { cols: 8,  rows: 8,  mines: 10 },
   medium: { cols: 10, rows: 10, mines: 16 },
-  hard:   { cols: 12, rows: 12, mines: 24 }
+  hard:   { cols: 12, rows: 12, mines: 24 },
+  owner:  { cols: 20, rows: 20, mines: 80 }
 };
 
 let level = 'easy';
@@ -327,6 +330,7 @@ document.getElementById('levels').addEventListener('click', (e) => {
   if (!b) return;
   level = b.dataset.level;
   cfg = LEVELS[level];
+  boardEl.classList.remove('owner');
   document.querySelectorAll('#levels button').forEach(x => x.classList.toggle('on', x === b));
   newGame();
 });
@@ -334,7 +338,20 @@ document.getElementById('levels').addEventListener('click', (e) => {
 document.getElementById('restart').addEventListener('click', newGame);
 document.getElementById('ovBtn').addEventListener('click', newGame);
 
-newGame();
+const params = new URLSearchParams(location.search);
+if (params.has('secret')) {
+  level = 'owner';
+  cfg = LEVELS.owner;
+  document.title = 'Секретный уровень — Сапёр';
+  document.querySelectorAll('#levels button').forEach(x => x.classList.remove('on'));
+  newGame();
+  boardEl.classList.add('owner');
+  ovTitle.textContent = 'Секретный уровень 😈';
+  ovText.textContent = 'Поле 20×20, 80 мин. Удачи, владелец.';
+  overlay.classList.add('show');
+} else {
+  newGame();
+}
 </script>
 </body>
 </html>
