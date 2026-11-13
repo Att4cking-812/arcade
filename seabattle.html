@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Морской бой — Brickyard Arcade</title>
+<meta name="description" content="Классический морской бой в браузере: расставь флот, найди корабли противника и потопи их. Brickyard Arcade.">
+<meta name="theme-color" content="#0a0d12">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --cyan:#00d4ff; --gold:#f0c060; --pink:#ff3b6b;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  [hidden]{display:none !important}
+  body{
+    margin:0; min-height:100vh; color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    background:
+      radial-gradient(1000px 620px at 10% -10%, rgba(0,212,255,.13), transparent 60%),
+      radial-gradient(900px 600px at 95% 0%, rgba(57,255,136,.08), transparent 55%),
+      radial-gradient(800px 600px at 50% 115%, rgba(255,59,107,.06), transparent 60%),
+      var(--bg);
+    padding:26px 22px 42px;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(0,212,255,.032) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.032) 1px, transparent 1px);
+    background-size:48px 48px;
+    -webkit-mask-image:radial-gradient(ellipse at 50% 18%, #000 0%, transparent 76%);
+    mask-image:radial-gradient(ellipse at 50% 18%, #000 0%, transparent 76%);
+  }
+  body.modal-open{overflow:hidden}
+  button,a{-webkit-tap-highlight-color:transparent}
+  button{font-family:inherit}
+  .shell{max-width:1120px; margin:0 auto; position:relative; z-index:1}
+
+  /* ── шапка ───────────────────────────────────── */
+  .top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .back{
+    color:var(--muted); text-decoration:none; font-size:13px; white-space:nowrap;
+    padding:9px 14px; border-radius:10px; border:1px solid var(--line);
+    background:rgba(255,255,255,.02); transition:.2s ease;
+  }
+  .back:hover{color:var(--text); border-color:rgba(57,255,136,.4); transform:translateY(-1px)}
+  .brand{display:flex; align-items:center; gap:12px; margin-right:auto}
+  .logo{
+    width:46px; height:46px; border-radius:14px; display:grid; place-items:center; font-size:23px;
+    background:linear-gradient(145deg,#162a35,#0c141c); border:1px solid var(--line);
+    box-shadow:0 0 30px rgba(0,212,255,.16), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .brand h1{font-size:clamp(20px,3.3vw,28px); letter-spacing:3px; text-transform:uppercase; line-height:1; margin:0; font-weight:800}
+  .brand h1 span{color:var(--cyan); text-shadow:0 0 20px rgba(0,212,255,.45)}
+  .brand small{display:block; color:var(--muted); font-size:9px; letter-spacing:2.6px; margin-top:5px}
+  .top-actions{display:flex; align-items:center; gap:9px; margin-left:auto}
+  .best-chip{
+    display:flex; align-items:center; gap:8px; padding:7px 11px; border-radius:10px;
+    border:1px solid rgba(240,192,96,.25); background:rgba(240,192,96,.05);
+  }
+  .best-chip span{font-size:9px; letter-spacing:1.3px; text-transform:uppercase; color:var(--muted)}
+  .best-chip b{font-size:15px; color:var(--gold); font-variant-numeric:tabular-nums}
+  .best-chip.flash{animation:bestFlash .9s ease}
+  @keyframes bestFlash{0%,100%{box-shadow:none}40%{box-shadow:0 0 24px rgba(240,192,96,.45)}}
+  .icon-btn{
+    width:40px; height:40px; padding:0; border-radius:10px; border:1px solid var(--line);
+    background:rgba(255,255,255,.02); color:var(--muted); display:grid; place-items:center;
+    cursor:pointer; transition:.2s ease;
+  }
+  .icon-btn:hover{color:var(--text); border-color:rgba(0,212,255,.35)}
+  .icon-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+  .icon-btn .slash{opacity:0; stroke:var(--pink)}
+  .icon-btn.muted .wave{opacity:0}
+  .icon-btn.muted .slash{opacity:1}
+  .icon-btn.muted{color:var(--pink); border-color:rgba(255,59,107,.28)}
+
+  /* ── пульт ───────────────────────────────────── */
+  .command{
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    position:relative; overflow:hidden; padding:14px 18px; margin-bottom:14px;
+    border:1px solid var(--line); border-radius:16px;
+    background:linear-gradient(160deg,rgba(23,34,45,.92),rgba(11,17,23,.96));
+  }
+  .command::after{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:2px;
+    background:linear-gradient(180deg,var(--cyan),transparent);
+  }
+  .command-info{min-width:min(100%,340px); flex:1}
+  .phase{
+    display:inline-flex; align-items:center; gap:8px; font-size:10px; font-weight:700;
+    letter-spacing:1.8px; text-transform:uppercase; color:var(--gold);
+  }
+  .phase .dot{
+    width:7px; height:7px; border-radius:50%; background:currentColor;
+    box-shadow:0 0 10px currentColor; animation:dotPulse 2s infinite;
+  }
+  .phase.player, .phase.win{color:var(--neon)}
+  .phase.ai, .phase.lose{color:var(--pink)}
+  @keyframes dotPulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .status{color:#cdd9e5; font-size:13.5px; line-height:1.5; margin-top:5px; min-height:20px}
+  .stats{display:flex; gap:8px; flex-wrap:wrap}
+  .stat{
+    min-width:82px; padding:7px 11px; border-radius:10px; text-align:center;
+    border:1px solid var(--line); background:rgba(255,255,255,.025);
+  }
+  .stat span{display:block; font-size:8px; letter-spacing:1.25px; text-transform:uppercase; color:var(--muted); margin-bottom:2px}
+  .stat b{font-size:17px; color:var(--neon); font-variant-numeric:tabular-nums; text-shadow:0 0 12px rgba(57,255,136,.2)}
+  .stat:nth-child(2) b{color:var(--cyan); text-shadow:0 0 12px rgba(0,212,255,.2)}
+  .stat:nth-child(3) b{color:var(--gold); text-shadow:0 0 12px rgba(240,192,96,.2)}
+
+  /* ── верфь ───────────────────────────────────── */
+  .dock{
+    padding:15px 18px 14px; margin-bottom:16px; border:1px solid var(--line); border-radius:16px;
+    background:linear-gradient(160deg,rgba(23,34,45,.9),rgba(11,17,23,.96));
+    box-shadow:0 18px 50px rgba(0,0,0,.25);
+  }
+  .dock-top{display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap}
+  .dock-info{min-width:220px}
+  .eyebrow{font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-weight:700}
+  .dock-title{font-size:16px; font-weight:700; margin-top:3px}
+  .dock-title span{color:var(--cyan); font-size:13px; font-weight:600; margin-left:6px}
+  .dock-sub{color:var(--muted); font-size:11.5px; line-height:1.4; margin-top:4px}
+  .dock-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:7px;
+    padding:10px 15px; border-radius:10px; border:1px solid var(--line);
+    background:rgba(255,255,255,.025); color:var(--text); text-decoration:none;
+    font-size:12.5px; font-weight:600; line-height:1; white-space:nowrap; cursor:pointer;
+    transition:.18s ease;
+  }
+  .btn:hover:not(:disabled){border-color:rgba(0,212,255,.45); background:rgba(0,212,255,.06); transform:translateY(-1px)}
+  .btn:active:not(:disabled){transform:translateY(0)}
+  .btn:disabled{opacity:.35; cursor:not-allowed; filter:saturate(.4)}
+  .btn.primary{
+    border:0; color:#052015; font-weight:800;
+    background:linear-gradient(180deg,#2dff8f,#12c96a);
+    box-shadow:0 8px 26px rgba(45,255,143,.2);
+  }
+  .btn.primary:hover:not(:disabled){filter:brightness(1.07); box-shadow:0 10px 30px rgba(45,255,143,.3)}
+  .btn.primary:disabled{box-shadow:none}
+  .btn.primary.ready{animation:readyPulse 2.2s ease-in-out infinite}
+  @keyframes readyPulse{0%,100%{box-shadow:0 8px 26px rgba(45,255,143,.2)}50%{box-shadow:0 8px 34px rgba(45,255,143,.42)}}
+  .btn.ghost{background:rgba(255,255,255,.02)}
+  kbd{
+    font-family:inherit; background:#1b2733; border:1px solid #2a3a4a; border-bottom-width:2px;
+    border-radius:5px; padding:1px 5px; font-size:9px; color:#dfe9f2;
+  }
+  .ship-dock{display:flex; gap:8px; flex-wrap:wrap; margin-top:13px}
+  .ship-card{
+    position:relative; display:flex; flex-direction:column; align-items:center; gap:5px;
+    min-width:46px; padding:7px 9px; border-radius:9px; border:1px solid var(--line);
+    background:linear-gradient(180deg,#101b24,#0b1218); color:var(--muted);
+    cursor:pointer; transition:.16s ease;
+  }
+  .ship-card:hover:not(:disabled){border-color:rgba(0,212,255,.35); transform:translateY(-1px)}
+  .ship-card.selected{
+    color:var(--cyan); border-color:rgba(0,212,255,.7); background:rgba(0,212,255,.08);
+    box-shadow:0 0 18px rgba(0,212,255,.15), inset 0 0 0 1px rgba(0,212,255,.25);
+  }
+  .ship-card.placed{opacity:.42; cursor:default; transform:none !important}
+  .ship-card.placed::after{content:"✓"; position:absolute; right:4px; top:1px; font-size:9px; color:var(--neon)}
+  .ship-card .blocks{display:flex; gap:2px}
+  .ship-card .blk{
+    width:8px; height:13px; border-radius:2px;
+    background:linear-gradient(180deg,#5cc9de,#1b6d7d);
+    box-shadow:0 0 6px rgba(0,212,255,.18);
+  }
+  .ship-card.selected .blk{background:linear-gradient(180deg,#a6f3ff,#2fa8c2)}
+  .ship-card.placed .blk{background:#415261; box-shadow:none}
+  .ship-card .name{font-size:8.5px; letter-spacing:.3px; white-space:nowrap}
+  .progress{height:3px; margin-top:13px; border-radius:99px; overflow:hidden; background:#0a1017}
+  .progress i{
+    display:block; height:100%; width:0; border-radius:99px;
+    background:linear-gradient(90deg,var(--cyan),var(--neon));
+    box-shadow:0 0 10px rgba(57,255,136,.4); transition:width .3s ease;
+  }
+
+  /* ── боевая полоса ────────────────────────────── */
+  .battlebar{
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    padding:13px 18px; margin-bottom:16px; border-radius:16px;
+    border:1px solid rgba(57,255,136,.16);
+    background:linear-gradient(160deg,rgba(19,35,30,.7),rgba(11,17,23,.96));
+    animation:slideIn .3s ease;
+  }
+  @keyframes slideIn{from{opacity:0; transform:translateY(-6px)}to{opacity:1; transform:none}}
+  .battlebar-info{min-width:220px}
+  .battle-hint{color:#a9b8c5; font-size:12px; line-height:1.5; margin-top:3px}
+  .legend{display:flex; gap:14px; flex-wrap:wrap}
+  .legend-item{display:inline-flex; align-items:center; gap:6px; font-size:10px; letter-spacing:.9px; text-transform:uppercase; color:var(--muted)}
+  .lg{width:10px; height:10px; border-radius:3px; display:inline-block; flex:0 0 auto}
+  .lg.hit{background:#ff3b6b; box-shadow:0 0 8px rgba(255,59,107,.5)}
+  .lg.miss{background:#405766; border-radius:50%}
+  .lg.sunk{background:#7a1628; box-shadow:inset 0 0 0 1px #ff6b8e, 0 0 8px rgba(255,59,107,.3)}
+
+  /* ── поля ─────────────────────────────────────── */
+  .arena{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start}
+  .panel{
+    position:relative; padding:14px; border-radius:18px; border:1px solid var(--line);
+    background:linear-gradient(160deg,rgba(23,34,45,.93),rgba(11,17,23,.97));
+    box-shadow:0 24px 60px rgba(0,0,0,.35);
+  }
+  .panel::before{
+    content:""; position:absolute; left:18px; right:18px; top:0; height:1px; opacity:.65;
+    background:linear-gradient(90deg,transparent,rgba(0,212,255,.55),transparent);
+  }
+  .player-panel{border-color:rgba(0,212,255,.16)}
+  .enemy-panel{border-color:rgba(255,59,107,.16)}
+  .enemy-panel::before{background:linear-gradient(90deg,transparent,rgba(255,59,107,.45),transparent)}
+  .panel-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:11px}
+  .panel-head h2{font-size:17px; letter-spacing:.2px; margin:3px 0 0}
+  .turn-badge{
+    font-size:9px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase; white-space:nowrap;
+    padding:5px 8px; border-radius:99px; border:1px solid var(--line);
+    color:var(--muted); background:rgba(255,255,255,.02); transition:.2s;
+  }
+  .turn-badge.active{color:var(--neon); border-color:rgba(57,255,136,.4); background:rgba(57,255,136,.06); box-shadow:0 0 14px rgba(57,255,136,.12)}
+  .turn-badge.active-pink{color:var(--pink); border-color:rgba(255,59,107,.4); background:rgba(255,59,107,.07); box-shadow:0 0 14px rgba(255,59,107,.12)}
+  .turn-badge.over-win{color:var(--neon); border-color:rgba(57,255,136,.35)}
+  .turn-badge.over-lose{color:var(--pink); border-color:rgba(255,59,107,.3)}
+  .board-wrap{
+    position:relative; padding:10px; border-radius:13px; overflow:hidden;
+    border:1px solid #16222e;
+    background:radial-gradient(ellipse at 50% 0%,#0c1a23,#070d13 72%);
+  }
+  .board-wrap::after{
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,212,255,.014) 3px 4px);
+  }
+  .board.shake{animation:shake .3s ease}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+  .board{
+    position:relative; z-index:1; display:grid;
+    grid-template-columns:15px repeat(10,minmax(0,1fr)); gap:3px;
+    user-select:none; -webkit-user-select:none; touch-action:manipulation;
+  }
+  .coord{display:grid; place-items:center; font-size:8.5px; line-height:1; color:#4d6070; font-weight:600; letter-spacing:.2px}
+  .coord.corner{opacity:0}
+  .cell{
+    position:relative; min-width:0; width:100%; aspect-ratio:1/1; padding:0;
+    border:0; border-radius:4px; cursor:pointer; touch-action:manipulation;
+    background:linear-gradient(150deg,#14222f,#0d1720);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+    transition:background .12s, box-shadow .12s, transform .08s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .cell:disabled{opacity:1; cursor:default}
+  .cell:focus-visible{outline:2px solid var(--cyan); outline-offset:1px; z-index:2}
+  .player-panel .cell:not(:disabled):hover{
+    background:linear-gradient(150deg,#1b3040,#112330);
+    box-shadow:inset 0 0 0 1px rgba(0,212,255,.25);
+  }
+  .enemy-panel .cell:not(:disabled):hover{
+    background:linear-gradient(150deg,#2a1822,#1a1018);
+    box-shadow:inset 0 0 0 1px rgba(255,59,107,.35);
+  }
+  .cell:not(:disabled):active{transform:scale(.94)}
+  .cell.ship{
+    background:
+      radial-gradient(circle at 50% 50%, rgba(2,18,24,.55) 0 8%, transparent 9%),
+      linear-gradient(150deg,#2b7c86,#154a58);
+    box-shadow:inset 0 0 0 1px rgba(0,212,255,.35), inset 0 1px 0 rgba(255,255,255,.18), 0 0 8px rgba(0,212,255,.08);
+  }
+  .cell.ghost-ok{
+    background:rgba(57,255,136,.28) !important;
+    box-shadow:inset 0 0 0 1px rgba(57,255,136,.7), 0 0 12px rgba(57,255,136,.18) !important;
+  }
+  .cell.ghost-bad{
+    background:rgba(255,59,107,.23) !important;
+    box-shadow:inset 0 0 0 1px rgba(255,59,107,.65) !important;
+  }
+  .cell.miss::before{
+    content:""; position:absolute; left:50%; top:50%; width:20%; height:20%;
+    border-radius:50%; background:#5a7284; transform:translate(-50%,-50%);
+    box-shadow:0 0 6px rgba(0,212,255,.25);
+  }
+  .cell.hit, .cell.sunk{background:linear-gradient(150deg,#5a1825,#351019)}
+  .cell.hit{box-shadow:inset 0 0 0 1px rgba(255,59,107,.5), 0 0 10px rgba(255,59,107,.15)}
+  .cell.hit::before, .cell.hit::after, .cell.sunk::before, .cell.sunk::after{
+    content:""; position:absolute; left:50%; top:50%; width:52%; height:1.5px; border-radius:2px;
+    background:#ff7a9c; transform:translate(-50%,-50%) rotate(45deg);
+    box-shadow:0 0 6px rgba(255,59,107,.9);
+  }
+  .cell.hit::after, .cell.sunk::after{transform:translate(-50%,-50%) rotate(-45deg)}
+  .cell.sunk{
+    background:linear-gradient(150deg,#7a1628,#3d0712);
+    box-shadow:inset 0 0 0 1px rgba(255,59,107,.75), 0 0 14px rgba(255,59,107,.28);
+    animation:sunkPulse .5s ease;
+  }
+  .cell.sunk::before, .cell.sunk::after{background:#ffd0da; height:2px; box-shadow:0 0 8px rgba(255,59,107,1)}
+  @keyframes sunkPulse{0%{transform:scale(1)}35%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .cell.reveal{
+    background:linear-gradient(150deg,rgba(0,212,255,.18),rgba(0,90,120,.12));
+    box-shadow:inset 0 0 0 1px rgba(0,212,255,.24);
+  }
+  .cell.flash-hit, .cell.flash-miss, .cell.flash-sunk{animation:cellPop .35s ease}
+  @keyframes cellPop{0%{transform:scale(.8)}55%{transform:scale(1.15)}100%{transform:scale(1)}}
+  .lock-note{
+    position:absolute; inset:1px; z-index:3; border-radius:12px; padding:10px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    text-align:center; background:rgba(6,11,16,.72); backdrop-filter:blur(2px);
+    pointer-events:none;
+  }
+  .lock-icon{
+    width:34px; height:34px; margin-bottom:4px; border-radius:50%; display:grid; place-items:center;
+    border:1px solid rgba(255,59,107,.3); color:var(--pink); font-size:19px;
+    box-shadow:0 0 20px rgba(255,59,107,.12); animation:lockPulse 2.4s infinite;
+  }
+  @keyframes lockPulse{0%,100%{opacity:.65}50%{opacity:1}}
+  .lock-note b{font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#b9c9d6}
+  .lock-note small{font-size:10px; color:var(--muted); line-height:1.35}
+  .board.locked .cell{opacity:.55}
+  .panel-foot{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:11px; min-height:22px}
+  .fleet-total{font-size:11px; color:var(--muted)}
+  .fleet-total b{color:var(--text); font-size:13px; margin:0 2px}
+  .fleet-total b.neon{color:var(--neon)}
+  .fleet-total b.pink{color:var(--pink)}
+  .fleet-pips{display:flex; gap:9px; flex-wrap:wrap}
+  .pip{display:flex; align-items:center; gap:4px; font-size:10px; color:var(--muted)}
+  .pip .blocks{display:flex; gap:1px}
+  .pip .blk{width:3px; height:8px; border-radius:1px; background:var(--cyan); opacity:.75}
+  .pip.dead .blk{background:#3e4e5d; opacity:.4}
+  .pip b{font-size:10px; color:#cdd9e5; min-width:8px}
+  .pip.dead b{color:#5a6b79}
+  .enemy-panel .pip .blk{background:var(--pink)}
+  .enemy-panel .pip.dead .blk{background:#3e4e5d}
+
+  /* ── подвал ───────────────────────────────────── */
+  footer{
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    margin-top:28px; padding-top:18px; border-top:1px solid var(--line);
+    color:var(--muted); font-size:12px;
+  }
+  footer a{color:var(--muted); text-decoration:none; transition:.2s}
+  footer a:hover{color:var(--text)}
+
+  /* ── тост и итоги ─────────────────────────────── */
+  .toast{
+    position:fixed; left:50%; bottom:22px; z-index:120; opacity:0; pointer-events:none;
+    transform:translate(-50%,12px); padding:10px 16px; border-radius:10px;
+    border:1px solid #22303d; background:#101b25; color:#cfe0ee; font-size:12px;
+    box-shadow:0 14px 40px rgba(0,0,0,.5); transition:.25s;
+  }
+  .toast.show{opacity:1; transform:translate(-50%,0)}
+  .overlay{
+    position:fixed; inset:0; z-index:100; padding:18px; display:flex; align-items:center; justify-content:center;
+    background:rgba(4,8,12,.76); backdrop-filter:blur(6px);
+    opacity:0; visibility:hidden; transition:opacity .25s, visibility .25s;
+  }
+  .overlay.show{opacity:1; visibility:visible}
+  .modal{
+    position:relative; overflow:hidden; width:min(430px,100%); padding:26px 26px 24px;
+    border:1px solid rgba(0,212,255,.22); border-radius:22px; text-align:center;
+    background:linear-gradient(160deg,#14212c,#0a1117);
+    box-shadow:0 30px 90px rgba(0,0,0,.7), 0 0 70px rgba(0,212,255,.07);
+    transform:translateY(18px) scale(.97); transition:transform .3s cubic-bezier(.2,.8,.2,1);
+  }
+  .overlay.show .modal{transform:none}
+  .modal::before{
+    content:""; position:absolute; left:20%; right:20%; top:0; height:1px; opacity:.7;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  }
+  .modal.win{border-color:rgba(57,255,136,.25)}
+  .modal.lose{border-color:rgba(255,59,107,.22)}
+  .result-kicker{font-size:9px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; color:var(--muted)}
+  .modal h2{font-size:32px; letter-spacing:.5px; margin:7px 0 5px}
+  .modal.win h2{color:var(--neon); text-shadow:0 0 26px rgba(57,255,136,.35)}
+  .modal.lose h2{color:var(--pink); text-shadow:0 0 26px rgba(255,59,107,.28)}
+  .result-sub{color:var(--muted); font-size:12.5px; line-height:1.5; margin:0 auto; max-width:320px}
+  .result-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:18px 0 10px}
+  .result-stat{padding:10px 6px; border-radius:11px; border:1px solid var(--line); background:rgba(255,255,255,.025)}
+  .result-stat span{display:block; font-size:8px; letter-spacing:1.3px; text-transform:uppercase; color:var(--muted); margin-bottom:3px}
+  .result-stat b{font-size:19px; color:var(--cyan); font-variant-numeric:tabular-nums}
+  .result-stat:nth-child(2) b{color:var(--neon)}
+  .result-stat:nth-child(3) b{color:var(--gold)}
+  .score-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin:10px 0 18px; padding:11px 14px; border-radius:12px; text-align:left;
+    border:1px solid rgba(57,255,136,.2); background:rgba(57,255,136,.05);
+  }
+  .score-row span{display:block; font-size:8px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted)}
+  .score-row > div:first-child > b{font-size:23px; color:var(--neon); line-height:1.1; font-variant-numeric:tabular-nums}
+  .record-note{font-size:10px; color:var(--muted); text-align:right; max-width:160px; line-height:1.4}
+  .record-note b{color:var(--gold); font-size:11px}
+  .modal-actions{display:flex; gap:9px; justify-content:center; flex-wrap:wrap; margin-top:8px}
+  .modal-actions .btn{min-width:120px}
+
+  /* ── адаптив ──────────────────────────────────── */
+  @media (max-width:900px){
+    body{padding:20px 16px 34px}
+    .arena{gap:12px}
+    .panel{padding:12px}
+    .status{font-size:12.5px}
+    .stat{min-width:70px; padding:6px 9px}
+    .stat b{font-size:15px}
+    .dock-actions{width:100%}
+    .dock-actions .btn{flex:1 1 auto}
+  }
+  @media (max-width:820px){
+    .arena{grid-template-columns:1fr}
+    .arena.battle .enemy-panel{order:-1}
+    .battlebar{padding:12px 14px}
+  }
+  @media (max-width:560px){
+    .top{gap:10px; margin-bottom:16px}
+    .back{font-size:12px; padding:8px 11px}
+    .brand{gap:9px}
+    .logo{width:38px; height:38px; font-size:19px; border-radius:11px}
+    .brand h1{font-size:18px; letter-spacing:2px}
+    .brand small{font-size:8px; letter-spacing:2px}
+    .best-chip{padding:6px 9px}
+    .command{padding:12px 14px; gap:10px}
+    .stats{width:100%}
+    .stat{flex:1; min-width:0; padding:6px 4px}
+    .dock{padding:12px 14px}
+    .dock-actions .btn{padding:9px 8px; font-size:11px}
+    .ship-dock{gap:6px}
+    .ship-card{padding:6px; min-width:40px}
+    .ship-card .blk{width:7px; height:11px}
+    .ship-card .name{font-size:7.5px}
+    .panel-head h2{font-size:15px}
+    .board{gap:2px; grid-template-columns:12px repeat(10,minmax(0,1fr))}
+    .coord{font-size:7.5px}
+    .cell{border-radius:3px}
+    .panel-foot{gap:6px}
+    .fleet-pips{gap:7px}
+    .modal{padding:22px 18px 20px}
+    .modal h2{font-size:28px}
+  }
+  @media (max-width:390px){
+    body{padding:14px 9px 28px}
+    .brand h1{font-size:16px; letter-spacing:1.5px}
+    .logo{width:34px; height:34px; font-size:17px}
+    .panel{padding:9px}
+    .board-wrap{padding:7px}
+    .command, .dock, .battlebar{border-radius:13px}
+    .ship-card{padding:6px 5px; min-width:32px}
+    .ship-card .name{display:none}
+    .modal{padding:22px 15px 18px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *, *::before, *::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <a class="back" href="index.html">← В аркаду</a>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">⚓</div>
+      <div>
+        <h1>Морской <span>бой</span></h1>
+        <small>BRICKYARD ARCADE</small>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="best-chip" title="Лучший результат"><span>Рекорд</span><b id="bestVal">0</b></div>
+      <button class="icon-btn" id="muteBtn" type="button" aria-label="Выключить звук" aria-pressed="false" title="Звук (M)">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none"/>
+          <path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7"/>
+          <path class="wave" d="M19 6a8.5 8.5 0 0 1 0 12"/>
+          <path class="slash" d="M4 4l16 16"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="command" aria-label="Состояние боя">
+    <div class="command-info">
+      <div class="phase placement" id="phaseChip"><span class="dot"></span><span id="phaseText">Расстановка</span></div>
+      <div class="status" id="status" aria-live="polite">Выбери корабль и поставь его на поле. R — повернуть.</div>
+    </div>
+    <div class="stats" aria-label="Статистика">
+      <div class="stat"><span>Выстрелы</span><b id="shotsVal">0</b></div>
+      <div class="stat"><span>Попадания</span><b id="hitsVal">0</b></div>
+      <div class="stat"><span>Точность</span><b id="accVal">0%</b></div>
+    </div>
+  </section>
+
+  <section class="dock" id="dock" aria-label="Расстановка флота">
+    <div class="dock-top">
+      <div class="dock-info">
+        <div class="eyebrow">Верфь · расстановка</div>
+        <div class="dock-title">Собери свой флот <span id="placedCount">0 / 10</span></div>
+        <div class="dock-sub" id="dockSub">Выбран линкор · 4 клетки · горизонтально</div>
+      </div>
+      <div class="dock-actions">
+        <button class="btn ghost" id="rotateBtn" type="button"><span id="orientIcon">↔</span> Повернуть <kbd>R</kbd></button>
+        <button class="btn ghost" id="randomBtn" type="button">Случайно</button>
+        <button class="btn ghost" id="clearBtn" type="button">Очистить</button>
+        <button class="btn primary" id="startBtn" type="button" disabled>В бой <span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+    <div class="ship-dock" id="shipDock" aria-label="Доступные корабли"></div>
+    <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
+  </section>
+
+  <section class="battlebar" id="battlebar" aria-label="Правила боя" hidden>
+    <div class="battlebar-info">
+      <div class="eyebrow">Боевой режим</div>
+      <div class="battle-hint">Попадание — дополнительный выстрел. Мимо — ход противника.</div>
+    </div>
+    <div class="legend" aria-label="Обозначения">
+      <span class="legend-item"><i class="lg hit"></i>попадание</span>
+      <span class="legend-item"><i class="lg miss"></i>мимо</span>
+      <span class="legend-item"><i class="lg sunk"></i>потоплен</span>
+    </div>
+  </section>
+
+  <main class="arena" id="arena">
+    <section class="panel player-panel" aria-labelledby="playerTitle">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow">Твой сектор</div>
+          <h2 id="playerTitle">Твой флот</h2>
+        </div>
+        <span class="turn-badge" id="playerBadge">Расстановка</span>
+      </div>
+      <div class="board-wrap">
+        <div class="board" id="playerBoard" aria-label="Твоё поле 10 на 10"></div>
+      </div>
+      <div class="panel-foot" id="playerFleet"></div>
+    </section>
+
+    <section class="panel enemy-panel" aria-labelledby="enemyTitle">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow">Сектор противника</div>
+          <h2 id="enemyTitle">Воды врага</h2>
+        </div>
+        <span class="turn-badge" id="enemyBadge">Закрыто</span>
+      </div>
+      <div class="board-wrap">
+        <div class="board locked" id="enemyBoard" aria-label="Поле противника 10 на 10"></div>
+        <div class="lock-note" id="lockNote">
+          <div class="lock-icon" aria-hidden="true">⌖</div>
+          <b>Воды закрыты</b>
+          <small>Начни бой, чтобы открыть сектор</small>
+        </div>
+      </div>
+      <div class="panel-foot" id="enemyFleet"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div>© Brickyard Arcade · сделано с 🍷</div>
+    <div>
+      <a href="https://att4cking-812.github.io/brickyard/">brickyard</a> ·
+      <a href="https://discord.gg/nWAATWnnnJ">discord</a> ·
+      <a href="thanks.html">спасибо</a>
+    </div>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="overlay" id="overlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+    <div class="result-kicker" id="resultKicker">Бой завершён</div>
+    <h2 id="resultTitle">Победа!</h2>
+    <p class="result-sub" id="resultSub">Флот противника уничтожен.</p>
+    <div class="result-stats">
+      <div class="result-stat"><span>Выстрелы</span><b id="resShots">0</b></div>
+      <div class="result-stat"><span>Попадания</span><b id="resHits">0</b></div>
+      <div class="result-stat"><span>Точность</span><b id="resAcc">0%</b></div>
+    </div>
+    <div class="score-row" id="scoreRow">
+      <div><span>Очки</span><b id="resScore">0</b></div>
+      <div class="record-note" id="recordNote">Рекорд: 0</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn primary" id="againBtn" type="button">Ещё раз</button>
+      <a class="btn ghost" href="index.html">В аркаду</a>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── Константы ─────────────────────────────────── */
+const SIZE = 10;
+const COLS = ['А','Б','В','Г','Д','Е','Ж','З','И','К'];
+const FLEET = [
+  { size: 4, name: 'Линкор' },
+  { size: 3, name: 'Крейсер' },
+  { size: 3, name: 'Крейсер' },
+  { size: 2, name: 'Эсминец' },
+  { size: 2, name: 'Эсминец' },
+  { size: 2, name: 'Эсминец' },
+  { size: 1, name: 'Катер' },
+  { size: 1, name: 'Катер' },
+  { size: 1, name: 'Катер' },
+  { size: 1, name: 'Катер' }
+];
+
+/* ── DOM ───────────────────────────────────────── */
+const $ = (id) => document.getElementById(id);
+const els = {
+  playerBoard: $('playerBoard'),
+  enemyBoard: $('enemyBoard'),
+  playerFleet: $('playerFleet'),
+  enemyFleet: $('enemyFleet'),
+  playerBadge: $('playerBadge'),
+  enemyBadge: $('enemyBadge'),
+  playerWrap: document.querySelector('.player-panel .board-wrap'),
+  phaseChip: $('phaseChip'),
+  phaseText: $('phaseText'),
+  status: $('status'),
+  shots: $('shotsVal'),
+  hits: $('hitsVal'),
+  acc: $('accVal'),
+  best: $('bestVal'),
+  bestChip: document.querySelector('.best-chip'),
+  dock: $('dock'),
+  battlebar: $('battlebar'),
+  arena: $('arena'),
+  shipDock: $('shipDock'),
+  placedCount: $('placedCount'),
+  dockSub: $('dockSub'),
+  progress: $('progressBar'),
+  orientIcon: $('orientIcon'),
+  rotateBtn: $('rotateBtn'),
+  randomBtn: $('randomBtn'),
+  clearBtn: $('clearBtn'),
+  startBtn: $('startBtn'),
+  lockNote: $('lockNote'),
+  muteBtn: $('muteBtn'),
+  overlay: $('overlay'),
+  modal: document.querySelector('.modal'),
+  resultKicker: $('resultKicker'),
+  resultTitle: $('resultTitle'),
+  resultSub: $('resultSub'),
+  resShots: $('resShots'),
+  resHits: $('resHits'),
+  resAcc: $('resAcc'),
+  scoreRow: $('scoreRow'),
+  resScore: $('resScore'),
+  recordNote: $('recordNote'),
+  againBtn: $('againBtn'),
+  toast: $('toast')
+};
+
+const playerCells = Array.from({ length: SIZE }, () => Array(SIZE));
+const enemyCells = Array.from({ length: SIZE }, () => Array(SIZE));
+
+/* ── Состояние ─────────────────────────────────── */
+let phase = 'placement';
+let orientation = 'h';
+let selected = 0;
+let playerGrid = emptyGrid();
+let enemyGrid = emptyGrid();
+let playerShips = [];
+let enemyShips = [];
+let playerShots = 0;
+let playerHits = 0;
+let turn = 'player';
+let busy = false;
+let gameWon = false;
+let aiQueue = [];
+let pending = [];
+let hoverCell = null;
+let ghostKey = '';
+let best = 0;
+let muted = false;
+let actx = null;
+let toastTimer = null;
+
+/* ── Вспомогательные функции ───────────────────── */
+function inBounds(x, y) {
+  return x >= 0 && y >= 0 && x < SIZE && y < SIZE;
+}
+
+function randInt(n) {
+  return Math.floor(Math.random() * n);
+}
+
+function emptyGrid() {
+  return Array.from({ length: SIZE }, () =>
+    Array.from({ length: SIZE }, () => ({ ship: null, shot: false, sunk: false }))
+  );
+}
+
+function shipCells(size, x, y, dir) {
+  const cells = [];
+  for (let i = 0; i < size; i++) {
+    cells.push({ x: x + (dir === 'h' ? i : 0), y: y + (dir === 'v' ? i : 0) });
+  }
+  return cells;
+}
+
+function cellsCanPlace(grid, cells) {
+  for (let i = 0; i < cells.length; i++) {
+    const cx = cells[i].x;
+    const cy = cells[i].y;
+    if (!inBounds(cx, cy)) return false;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        if (inBounds(nx, ny) && grid[ny][nx].ship) return false;
+      }
+    }
+  }
+  return true;
+}
+
+function makeShip(id, size, x, y, dir) {
+  return {
+    id: id,
+    size: size,
+    name: FLEET[id] ? FLEET[id].name : 'Корабль',
+    x: x,
+    y: y,
+    dir: dir,
+    cells: shipCells(size, x, y, dir),
+    hits: 0,
+    sunk: false
+  };
+}
+
+function addShipToGrid(grid, ships, ship) {
+  ship.cells.forEach((c) => { grid[c.y][c.x].ship = ship; });
+  ships.push(ship);
+}
+
+function generateFleet() {
+  const order = FLEET.map((_, i) => i).sort((a, b) => FLEET[b].size - FLEET[a].size);
+
+  for (let attempt = 0; attempt < 260; attempt++) {
+    const grid = emptyGrid();
+    const ships = [];
+    let ok = true;
+
+    for (let oi = 0; oi < order.length; oi++) {
+      const id = order[oi];
+      const size = FLEET[id].size;
+      let placed = false;
+
+      for (let tries = 0; tries < 240; tries++) {
+        const dir = Math.random() < 0.5 ? 'h' : 'v';
+        const x = randInt(SIZE);
+        const y = randInt(SIZE);
+        const cells = shipCells(size, x, y, dir);
+        if (!cellsCanPlace(grid, cells)) continue;
+        addShipToGrid(grid, ships, makeShip(id, size, x, y, dir));
+        placed = true;
+        break;
+      }
+
+      if (!placed) {
+        ok = false;
+        break;
+      }
+    }
+
+    if (ok) return { grid: grid, ships: ships };
+  }
+
+  /* Страховка: гарантированно корректная раскладка. */
+  const layout = [
+    [0, 0, 'h'], [5, 0, 'h'], [0, 2, 'h'], [5, 2, 'h'], [8, 2, 'h'],
+    [0, 4, 'h'], [4, 4, 'h'], [6, 4, 'h'], [8, 4, 'h'], [0, 6, 'h']
+  ];
+  const grid = emptyGrid();
+  const ships = [];
+  FLEET.forEach((spec, id) => {
+    const pos = layout[id];
+    addShipToGrid(grid, ships, makeShip(id, spec.size, pos[0], pos[1], pos[2]));
+  });
+  return { grid: grid, ships: ships };
+}
+
+function nextUnplaced() {
+  for (let i = 0; i < FLEET.length; i++) {
+    let used = false;
+    for (let j = 0; j < playerShips.length; j++) {
+      if (playerShips[j].id === i) { used = true; break; }
+    }
+    if (!used) return i;
+  }
+  return null;
+}
+
+function cellWord(n) {
+  const abs = Math.abs(n) % 100;
+  const last = abs % 10;
+  if (abs > 10 && abs < 20) return 'клеток';
+  if (last === 1) return 'клетка';
+  if (last >= 2 && last <= 4) return 'клетки';
+  return 'клеток';
+}
+
+function shotWord(n) {
+  const abs = Math.abs(n) % 100;
+  const last = abs % 10;
+  if (abs > 10 && abs < 20) return 'выстрелов';
+  if (last === 1) return 'выстрел';
+  if (last >= 2 && last <= 4) return 'выстрела';
+  return 'выстрелов';
+}
+
+/* ── Сборка полей ──────────────────────────────── */
+function buildBoard(el, cells) {
+  el.innerHTML = '';
+  const frag = document.createDocumentFragment();
+
+  const corner = document.createElement('div');
+  corner.className = 'coord corner';
+  corner.setAttribute('aria-hidden', 'true');
+  frag.appendChild(corner);
+
+  COLS.forEach((ch) => {
+    const label = document.createElement('div');
+    label.className = 'coord';
+    label.textContent = ch;
+    label.setAttribute('aria-hidden', 'true');
+    frag.appendChild(label);
+  });
+
+  for (let y = 0; y < SIZE; y++) {
+    const rowLabel = document.createElement('div');
+    rowLabel.className = 'coord';
+    rowLabel.textContent = String(y + 1);
+    rowLabel.setAttribute('aria-hidden', 'true');
+    frag.appendChild(rowLabel);
+
+    for (let x = 0; x < SIZE; x++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cell';
+      b.dataset.x = String(x);
+      b.dataset.y = String(y);
+      b.setAttribute('aria-label', COLS[x] + (y + 1));
+      cells[y][x] = b;
+      frag.appendChild(b);
+    }
+  }
+
+  el.appendChild(frag);
+}
+
+function cellLabel(side, x, y) {
+  const base = COLS[x] + (y + 1);
+  const st = side === 'player' ? playerGrid[y][x] : enemyGrid[y][x];
+
+  if (side === 'player') {
+    if (st.sunk) return base + ' — твой корабль потоплен';
+    if (st.shot && st.ship) return base + ' — попадание';
+    if (st.shot) return base + ' — мимо';
+    if (st.ship) return base + ' — твой корабль';
+    return base + ' — вода';
+  }
+
+  if (st.sunk) return base + ' — корабль противника потоплен';
+  if (st.shot && st.ship) return base + ' — попадание';
+  if (st.shot) return base + ' — мимо';
+  if (phase === 'over' && st.ship) return base + ' — корабль противника';
+  return base + ' — вода';
+}
+
+function paintPlayer() {
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const st = playerGrid[y][x];
+      const el = playerCells[y][x];
+      let cls = 'cell';
+      if (st.ship) cls += ' ship';
+      if (st.shot && st.ship) cls += ' hit';
+      if (st.shot && !st.ship) cls += ' miss';
+      if (st.sunk) cls += ' sunk';
+      el.className = cls;
+      el.disabled = phase !== 'placement';
+      el.setAttribute('aria-label', cellLabel('player', x, y));
+    }
+  }
+}
+
+function paintEnemy() {
+  const canShoot = phase === 'battle' && turn === 'player' && !busy;
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const st = enemyGrid[y][x];
+      const el = enemyCells[y][x];
+      let cls = 'cell';
+      if (st.shot && st.ship) cls += ' hit';
+      if (st.shot && !st.ship) cls += ' miss';
+      if (st.sunk) cls += ' sunk';
+      if (phase === 'over' && st.ship && !st.shot) cls += ' reveal';
+      el.className = cls;
+      el.disabled = !canShoot;
+      el.setAttribute('aria-label', cellLabel('enemy', x, y));
+    }
+  }
+}
+
+function paintFleet(el, ships, side) {
+  if (phase === 'placement' && side === 'enemy') {
+    el.innerHTML = '<span class="fleet-total">Флот противника: <b>скрыт</b> до боя</span>';
+    return;
+  }
+
+  const alive = ships.filter((s) => !s.sunk).length;
+  const label = phase === 'placement'
+    ? 'На поле <b class="neon">' + ships.length + '</b> / 10'
+    : 'Осталось <b class="' + (side === 'enemy' ? 'pink' : 'neon') + '">' + alive + '</b> / 10';
+
+  let pips = '';
+  [4, 3, 2, 1].forEach((size) => {
+    const n = ships.filter((s) => s.size === size && !s.sunk).length;
+    pips += '<span class="pip' + (n === 0 ? ' dead' : '') + '">' +
+      '<span class="blocks">' + '<i class="blk"></i>'.repeat(size) + '</span>' +
+      '<b>×' + n + '</b></span>';
+  });
+
+  el.innerHTML = '<span class="fleet-total">' + label + '</span>' +
+    '<span class="fleet-pips">' + pips + '</span>';
+}
+
+function paintFoots() {
+  paintFleet(els.playerFleet, playerShips, 'player');
+  paintFleet(els.enemyFleet, enemyShips, 'enemy');
+}
+
+/* ── Статус и индикаторы ───────────────────────── */
+function setStatus(text) {
+  els.status.textContent = text;
+}
+
+function setPhase(kind, text) {
+  els.phaseChip.className = 'phase ' + kind;
+  els.phaseText.textContent = text;
+}
+
+function updateTurnUI() {
+  const e = els.enemyBadge;
+  const p = els.playerBadge;
+  e.className = 'turn-badge';
+  p.className = 'turn-badge';
+
+  if (phase === 'placement') {
+    e.textContent = 'Закрыто';
+    p.textContent = 'Расстановка';
+    return;
+  }
+
+  if (phase === 'battle') {
+    if (turn === 'player') {
+      e.textContent = 'Твой ход';
+      e.classList.add('active');
+      p.textContent = 'В бою';
+    } else {
+      e.textContent = 'Ждём';
+      p.textContent = 'Ход врага';
+      p.classList.add('active-pink');
+    }
+    return;
+  }
+
+  if (gameWon) {
+    p.textContent = 'Победа';
+    p.classList.add('active');
+    e.textContent = 'Уничтожен';
+    e.classList.add('over-win');
+  } else {
+    p.textContent = 'Потоплен';
+    p.classList.add('active-pink');
+    e.textContent = 'Выжил';
+    e.classList.add('over-lose');
+  }
+}
+
+function updateStats() {
+  const accuracy = playerShots ? Math.round((playerHits / playerShots) * 100) : 0;
+  els.shots.textContent = String(playerShots);
+  els.hits.textContent = String(playerHits);
+  els.acc.textContent = accuracy + '%';
+}
+
+/* ── Верфь ─────────────────────────────────────── */
+function renderDock() {
+  let html = '';
+
+  FLEET.forEach((spec, id) => {
+    const placed = playerShips.some((s) => s.id === id);
+    const sel = !placed && selected === id;
+    const blocks = '<span class="blocks">' + '<i class="blk"></i>'.repeat(spec.size) + '</span>';
+
+    html += '<button type="button" class="ship-card' + (placed ? ' placed' : '') +
+      (sel ? ' selected' : '') + '" data-ship="' + id + '"' + (placed ? ' disabled' : '') +
+      ' aria-label="' + spec.name + ', ' + spec.size + ' ' + cellWord(spec.size) +
+      (placed ? ', на поле' : '') + '">' + blocks +
+      '<span class="name">' + spec.name + '</span></button>';
+  });
+
+  els.shipDock.innerHTML = html;
+}
+
+function updatePlacementUI() {
+  const count = playerShips.length;
+  els.placedCount.textContent = count + ' / 10';
+  els.progress.style.width = (count * 10) + '%';
+  els.rotateBtn.disabled = selected === null;
+  els.clearBtn.disabled = count === 0;
+  els.randomBtn.disabled = false;
+  els.startBtn.disabled = count !== 10;
+  els.startBtn.classList.toggle('ready', count === 10);
+  els.orientIcon.textContent = orientation === 'h' ? '↔' : '↕';
+
+  const spec = selected !== null ? FLEET[selected] : null;
+  if (spec) {
+    els.dockSub.textContent = 'Выбран ' + spec.name.toLowerCase() + ' · ' +
+      spec.size + ' ' + cellWord(spec.size) + ' · ' +
+      (orientation === 'h' ? 'горизонтально' : 'вертикально');
+  } else if (count === 10) {
+    els.dockSub.textContent = 'Все корабли на поле · жми «В бой»';
+  } else {
+    els.dockSub.textContent = 'Выбери корабль из верфи';
+  }
+}
+
+function placementStatus() {
+  if (phase !== 'placement') return;
+  if (playerShips.length === 10) {
+    setStatus('Флот готов к бою. Нажми «В бой», чтобы открыть воды противника.');
+    return;
+  }
+  if (selected === null) {
+    setStatus('Выбери свободный корабль из верфи.');
+    return;
+  }
+  const spec = FLEET[selected];
+  setStatus('Выбран ' + spec.name.toLowerCase() + ' · ' + spec.size + ' ' +
+    cellWord(spec.size) + '. Клик по полю — поставить, R — повернуть.');
+}
+
+/* ── Предпросмотр ──────────────────────────────── */
+function clearGhost() {
+  const marked = els.playerBoard.querySelectorAll('.ghost-ok, .ghost-bad');
+  for (let i = 0; i < marked.length; i++) {
+    marked[i].classList.remove('ghost-ok', 'ghost-bad');
+  }
+  ghostKey = '';
+}
+
+function showGhost(x, y) {
+  if (phase !== 'placement' || selected === null) {
+    clearGhost();
+    return;
+  }
+
+  const key = selected + '|' + orientation + '|' + x + '|' + y;
+  if (key === ghostKey) return;
+  clearGhost();
+  ghostKey = key;
+
+  const spec = FLEET[selected];
+  const cells = shipCells(spec.size, x, y, orientation);
+  const valid = cellsCanPlace(playerGrid, cells);
+
+  cells.forEach((c) => {
+    if (!inBounds(c.x, c.y)) return;
+    playerCells[c.y][c.x].classList.add(valid ? 'ghost-ok' : 'ghost-bad');
+  });
+}
+
+/* ── Звук ──────────────────────────────────────── */
+function ensureAudio() {
+  try {
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      actx = new AC();
+    }
+    if (actx.state === 'suspended') {
+      actx.resume().catch(() => {});
+    }
+  } catch (e) {}
+}
+
+function tone(freq, dur, type, vol, when, endFreq) {
+  if (muted || !actx) return;
+  try {
+    const t = actx.currentTime + (when || 0);
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    if (endFreq) {
+      o.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t + dur);
+    }
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol || 0.1), t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+    g.connect(actx.destination);
+    o.start(t);
+    o.stop(t + dur + 0.03);
+  } catch (e) {}
+}
+
+function noiseBurst(dur, vol, when, cutoff) {
+  if (muted || !actx) return;
+  try {
+    const t = actx.currentTime + (when || 0);
+    const len = Math.max(1, Math.floor(actx.sampleRate * dur));
+    const buffer = actx.createBuffer(1, len, actx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const fade = 1 - i / len;
+      data[i] = (Math.random() * 2 - 1) * fade * fade;
+    }
+    const src = actx.createBufferSource();
+    src.buffer = buffer;
+    const filter = actx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(cutoff || 1400, t);
+    const g = actx.createGain();
+    g.gain.setValueAtTime(vol || 0.1, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(actx.destination);
+    src.start(t);
+    src.stop(t + dur + 0.02);
+  } catch (e) {}
+}
+
+function sfxShot() {
+  noiseBurst(0.09, 0.1, 0, 2200);
+  tone(180, 0.08, 'square', 0.06, 0, 70);
+}
+function sfxHit() {
+  noiseBurst(0.12, 0.09, 0, 800);
+  tone(140, 0.16, 'sine', 0.15, 0, 60);
+  tone(740, 0.1, 'triangle', 0.08, 0.02, 520);
+}
+function sfxMiss() {
+  tone(420, 0.16, 'sine', 0.12, 0, 150);
+  noiseBurst(0.18, 0.05, 0, 500);
+}
+function sfxSunk() {
+  noiseBurst(0.5, 0.18, 0, 900);
+  tone(120, 0.45, 'sawtooth', 0.12, 0, 40);
+  tone(70, 0.5, 'sine', 0.14, 0.05, 35);
+  tone(320, 0.16, 'triangle', 0.07, 0.05, 120);
+}
+function sfxPlace() {
+  tone(720, 0.05, 'triangle', 0.05);
+  tone(980, 0.06, 'triangle', 0.04, 0.04);
+}
+function sfxSelect() {
+  tone(620, 0.04, 'sine', 0.04);
+}
+function sfxError() {
+  tone(180, 0.09, 'square', 0.05);
+  tone(140, 0.11, 'square', 0.04, 0.08);
+}
+function sfxStart() {
+  tone(330, 0.12, 'sine', 0.08);
+  tone(660, 0.16, 'sine', 0.08, 0.13);
+  tone(990, 0.24, 'sine', 0.07, 0.29);
+}
+function sfxWin() {
+  [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'triangle', 0.11, i * 0.12));
+  tone(1568, 0.4, 'sine', 0.06, 0.55);
+}
+function sfxLose() {
+  tone(310, 0.22, 'sawtooth', 0.08, 0);
+  tone(233, 0.26, 'sawtooth', 0.08, 0.18);
+  tone(155, 0.5, 'sawtooth', 0.1, 0.42, 90);
+}
+function sfxToggle() {
+  tone(660, 0.06, 'sine', 0.07);
+  tone(990, 0.08, 'sine', 0.07, 0.05);
+}
+
+function syncMuteButton() {
+  els.muteBtn.classList.toggle('muted', muted);
+  els.muteBtn.setAttribute('aria-pressed', String(muted));
+  const label = muted ? 'Включить звук' : 'Выключить звук';
+  els.muteBtn.setAttribute('aria-label', label);
+  els.muteBtn.title = label + ' (M)';
+}
+
+function toggleMute() {
+  muted = !muted;
+  try { localStorage.setItem('seabattle_muted', muted ? '1' : '0'); } catch (e) {}
+  syncMuteButton();
+  if (!muted) {
+    ensureAudio();
+    sfxToggle();
+    showToast('Звук включён');
+  } else {
+    showToast('Звук выключен');
+  }
+}
+
+/* ── Тост ──────────────────────────────────────── */
+function showToast(message) {
+  els.toast.textContent = message;
+  els.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => els.toast.classList.remove('show'), 1900);
+}
+
+function flash(el, cls) {
+  if (!el) return;
+  el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), 420);
+}
+
+function shakeBoard() {
+  const el = els.playerBoard;
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+  setTimeout(() => el.classList.remove('shake'), 340);
+}
+
+/* ── Отложенные действия (ИИ) ──────────────────── */
+function later(fn, ms) {
+  const id = setTimeout(() => {
+    pending = pending.filter((t) => t !== id);
+    fn();
+  }, ms);
+  pending.push(id);
+  return id;
+}
+
+function clearPending() {
+  pending.forEach((id) => clearTimeout(id));
+  pending = [];
+}
+
+/* ── Расстановка ───────────────────────────────── */
+function placeShip(x, y) {
+  if (phase !== 'placement' || selected === null) return;
+  const spec = FLEET[selected];
+  const cells = shipCells(spec.size, x, y, orientation);
+
+  if (!cellsCanPlace(playerGrid, cells)) {
+    sfxError();
+    shakeBoard();
+    showToast('Нельзя: корабль выходит за поле или касается другого');
+    return;
+  }
+
+  const ship = makeShip(selected, spec.size, x, y, orientation);
+  addShipToGrid(playerGrid, playerShips, ship);
+  selected = nextUnplaced();
+  hoverCell = null;
+  clearGhost();
+  sfxPlace();
+
+  paintPlayer();
+  renderDock();
+  updatePlacementUI();
+  paintFleet(els.playerFleet, playerShips, 'player');
+
+  if (selected === null) {
+    setStatus('Флот готов к бою. Нажми «В бой», чтобы открыть воды противника.');
+    showToast('Все 10 кораблей на поле');
+  } else {
+    placementStatus();
+  }
+}
+
+function randomizeFleet() {
+  if (phase !== 'placement') return;
+  ensureAudio();
+  const gen = generateFleet();
+  playerGrid = gen.grid;
+  playerShips = gen.ships;
+  selected = nextUnplaced();
+  hoverCell = null;
+  clearGhost();
+  sfxPlace();
+
+  paintPlayer();
+  renderDock();
+  updatePlacementUI();
+  paintFleet(els.playerFleet, playerShips, 'player');
+  setStatus('Флот расставлен случайно. Можно начинать бой или очистить поле.');
+  showToast('Флот расставлен случайно');
+}
+
+function clearFleet() {
+  if (phase !== 'placement') return;
+  playerGrid = emptyGrid();
+  playerShips = [];
+  selected = 0;
+  orientation = 'h';
+  hoverCell = null;
+  clearGhost();
+  sfxSelect();
+
+  paintPlayer();
+  renderDock();
+  updatePlacementUI();
+  paintFleet(els.playerFleet, playerShips, 'player');
+  placementStatus();
+  showToast('Поле очищено');
+}
+
+function rotateShip() {
+  if (phase !== 'placement' || selected === null) return;
+  orientation = orientation === 'h' ? 'v' : 'h';
+  updatePlacementUI();
+  if (hoverCell) showGhost(hoverCell.x, hoverCell.y);
+  sfxSelect();
+}
+
+/* ── Бой ───────────────────────────────────────── */
+function startBattle() {
+  if (phase !== 'placement' || playerShips.length !== 10) return;
+  ensureAudio();
+  clearPending();
+
+  const gen = generateFleet();
+  enemyGrid = gen.grid;
+  enemyShips = gen.ships;
+
+  phase = 'battle';
+  turn = 'player';
+  busy = false;
+  playerShots = 0;
+  playerHits = 0;
+  gameWon = false;
+  aiQueue = [];
+
+  els.dock.hidden = true;
+  els.battlebar.hidden = false;
+  els.arena.classList.add('battle');
+  els.enemyBoard.classList.remove('locked');
+  els.lockNote.hidden = true;
+
+  updateStats();
+  paintPlayer();
+  paintEnemy();
+  paintFoots();
+  updateTurnUI();
+  setPhase('player', 'Твой ход');
+  setStatus('Бой начался. Выбери клетку в водах противника.');
+  sfxStart();
+
+  if (window.matchMedia && window.matchMedia('(max-width: 820px)').matches) {
+    setTimeout(() => {
+      if (phase !== 'battle') return;
+      try { els.arena.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+    }, 140);
+  }
+}
+
+function startAiTurn() {
+  if (phase !== 'battle') return;
+  turn = 'ai';
+  busy = true;
+  setPhase('ai', 'Ход противника');
+  setStatus('Противник целится…');
+  updateTurnUI();
+  paintEnemy();
+  later(aiFire, 400 + Math.random() * 400);
+}
+
+function addAiNeighbours(x, y) {
+  const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+  for (let i = dirs.length - 1; i > 0; i--) {
+    const j = randInt(i + 1);
+    const tmp = dirs[i];
+    dirs[i] = dirs[j];
+    dirs[j] = tmp;
+  }
+
+  dirs.forEach((d) => {
+    const nx = x + d[0];
+    const ny = y + d[1];
+    if (!inBounds(nx, ny) || playerGrid[ny][nx].shot) return;
+    if (aiQueue.some((p) => p.x === nx && p.y === ny)) return;
+    aiQueue.push({ x: nx, y: ny });
+  });
+}
+
+function chooseAiTarget() {
+  aiQueue = aiQueue.filter((p) => !playerGrid[p.y][p.x].shot);
+
+  while (aiQueue.length) {
+    const p = aiQueue.shift();
+    if (!playerGrid[p.y][p.x].shot) return p;
+  }
+
+  const parity = [];
+  const all = [];
+
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      if (playerGrid[y][x].shot) continue;
+      const p = { x: x, y: y };
+      all.push(p);
+      if ((x + y) % 2 === 0) parity.push(p);
+    }
+  }
+
+  const pool = parity.length ? parity : all;
+  if (!pool.length) return null;
+  return pool[randInt(pool.length)];
+}
+
+function aiFire() {
+  if (phase !== 'battle' || turn !== 'ai') return;
+
+  const target = chooseAiTarget();
+  if (!target) {
+    turn = 'player';
+    busy = false;
+    updateTurnUI();
+    paintEnemy();
+    setPhase('player', 'Твой ход');
+    setStatus('Противник промахнулся. Твой ход.');
+    return;
+  }
+
+  const cell = playerGrid[target.y][target.x];
+  cell.shot = true;
+  sfxShot();
+
+  let shotClass = 'flash-miss';
+
+  if (cell.ship) {
+    cell.ship.hits++;
+    shotClass = 'flash-hit';
+
+    if (cell.ship.hits >= cell.ship.size) {
+      cell.ship.sunk = true;
+      cell.ship.cells.forEach((c) => { playerGrid[c.y][c.x].sunk = true; });
+      aiQueue = [];
+      shotClass = 'flash-sunk';
+      sfxSunk();
+      setStatus('Противник потопил твой корабль. Он стреляет снова…');
+    } else {
+      addAiNeighbours(target.x, target.y);
+      sfxHit();
+      setStatus('Противник попал! Он стреляет снова…');
+    }
+  } else {
+    sfxMiss();
+    setStatus('Противник промахнулся. Твой ход.');
+  }
+
+  paintPlayer();
+  paintFleet(els.playerFleet, playerShips, 'player');
+  const targetEl = playerCells[target.y][target.x];
+
+  if (playerShips.every((s) => s.sunk)) {
+    endGame(false);
+    flash(targetEl, shotClass);
+    return;
+  }
+
+  if (cell.ship) {
+    flash(targetEl, shotClass);
+    later(aiFire, 400 + Math.random() * 400);
+  } else {
+    turn = 'player';
+    busy = false;
+    updateTurnUI();
+    setPhase('player', 'Твой ход');
+    paintEnemy();
+    flash(targetEl, 'flash-miss');
+  }
+}
+
+function playerShoot(x, y) {
+  if (phase !== 'battle' || busy || turn !== 'player') return;
+
+  const cell = enemyGrid[y][x];
+  if (cell.shot) {
+    showToast('Сюда уже стреляли');
+    return;
+  }
+
+  ensureAudio();
+  cell.shot = true;
+  playerShots++;
+  sfxShot();
+
+  let shotClass = 'flash-miss';
+
+  if (cell.ship) {
+    cell.ship.hits++;
+    playerHits++;
+    shotClass = 'flash-hit';
+
+    if (cell.ship.hits >= cell.ship.size) {
+      cell.ship.sunk = true;
+      cell.ship.cells.forEach((c) => { enemyGrid[c.y][c.x].sunk = true; });
+      shotClass = 'flash-sunk';
+      sfxSunk();
+      setStatus('Корабль потоплен! Ты стреляешь снова.');
+      showToast('Потоплен ' + cell.ship.name.toLowerCase());
+    } else {
+      sfxHit();
+      setStatus('Попадание! Ты стреляешь снова.');
+    }
+  } else {
+    sfxMiss();
+    setStatus('Мимо. Противник готовит ответный выстрел…');
+  }
+
+  updateStats();
+  paintFleet(els.enemyFleet, enemyShips, 'enemy');
+
+  if (enemyShips.every((s) => s.sunk)) {
+    endGame(true);
+    flash(enemyCells[y][x], shotClass);
+    return;
+  }
+
+  if (cell.ship) {
+    paintEnemy();
+    flash(enemyCells[y][x], shotClass);
+    return;
+  }
+
+  /* Мимо — отвечает ИИ. */
+  startAiTurn();
+  flash(enemyCells[y][x], 'flash-miss');
+}
+
+/* ── Итоги ─────────────────────────────────────── */
+function endGame(won) {
+  if (phase === 'over') return;
+
+  phase = 'over';
+  gameWon = won;
+  busy = true;
+  turn = 'none';
+  clearPending();
+  aiQueue = [];
+
+  const oldBest = best;
+  const score = won ? Math.max(1, 1000 - playerShots * 10) : 0;
+
+  if (won) {
+    if (score > best) {
+      best = score;
+      try { localStorage.setItem('seabattle_best', String(best)); } catch (e) {}
+    }
+    els.best.textContent = String(best);
+    els.bestChip.classList.add('flash');
+    setTimeout(() => els.bestChip.classList.remove('flash'), 1300);
+
+    if (typeof lbSubmit === 'function') {
+      try { lbSubmit('seabattle', lbName(), score); } catch (e) {}
+    }
+
+    sfxWin();
+  } else {
+    sfxLose();
+  }
+
+  paintPlayer();
+  paintEnemy();
+  paintFoots();
+  updateStats();
+  updateTurnUI();
+  setPhase(won ? 'win' : 'lose', won ? 'Победа' : 'Поражение');
+  setStatus(won
+    ? 'Победа! Флот противника уничтожен.'
+    : 'Поражение. Весь твой флот на дне.');
+
+  const accuracy = playerShots ? Math.round((playerHits / playerShots) * 100) : 0;
+  later(() => showResult(won, score, accuracy, oldBest), 700);
+}
+
+function showResult(won, score, accuracy, oldBest) {
+  if (phase !== 'over') return;
+
+  els.modal.classList.toggle('win', won);
+  els.modal.classList.toggle('lose', !won);
+  els.resultKicker.textContent = won ? 'Бой завершён · победа' : 'Бой завершён · поражение';
+  els.resultTitle.textContent = won ? 'Победа!' : 'Поражение';
+  els.resultSub.textContent = won
+    ? 'Флот противника уничтожен за ' + playerShots + ' ' + shotWord(playerShots) + '.'
+    : (best > 0
+      ? 'Твой флот уничтожен. Твой рекорд: ' + best + '.'
+      : 'Твой флот уничтожен. Попробуй другую расстановку.');
+
+  els.resShots.textContent = String(playerShots);
+  els.resHits.textContent = String(playerHits);
+  els.resAcc.textContent = accuracy + '%';
+
+  els.scoreRow.hidden = !won;
+  if (won) {
+    els.resScore.textContent = String(score);
+    els.recordNote.innerHTML = score > oldBest
+      ? '<b>Новый рекорд!</b>'
+      : 'Рекорд: <b>' + best + '</b>';
+  }
+
+  els.overlay.classList.add('show');
+  els.overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+  clearTimeout(toastTimer);
+  els.toast.classList.remove('show');
+
+  setTimeout(() => {
+    if (!els.overlay.classList.contains('show')) return;
+    try { els.againBtn.focus({ preventScroll: true }); } catch (e) {}
+  }, 300);
+}
+
+/* ── Сброс ─────────────────────────────────────── */
+function resetGame() {
+  const hadOverlay = els.overlay.classList.contains('show');
+
+  clearPending();
+  hoverCell = null;
+  clearGhost();
+
+  phase = 'placement';
+  orientation = 'h';
+  selected = 0;
+  playerGrid = emptyGrid();
+  enemyGrid = emptyGrid();
+  playerShips = [];
+  enemyShips = [];
+  playerShots = 0;
+  playerHits = 0;
+  turn = 'player';
+  busy = false;
+  gameWon = false;
+  aiQueue = [];
+
+  els.overlay.classList.remove('show');
+  els.overlay.setAttribute('aria-hidden', 'true');
+  els.modal.classList.remove('win', 'lose');
+  document.body.classList.remove('modal-open');
+  els.bestChip.classList.remove('flash');
+
+  els.dock.hidden = false;
+  els.battlebar.hidden = true;
+  els.arena.classList.remove('battle');
+  els.enemyBoard.classList.add('locked');
+  els.lockNote.hidden = false;
+  els.best.textContent = String(best);
+
+  updateStats();
+  paintPlayer();
+  paintEnemy();
+  paintFoots();
+  renderDock();
+  updatePlacementUI();
+  updateTurnUI();
+  setPhase('placement', 'Расстановка');
+  setStatus('Выбери корабль и поставь его на поле. R — повернуть.');
+
+  if (hadOverlay) {
+    try { els.randomBtn.focus({ preventScroll: true }); } catch (e) {}
+  }
+}
+
+/* ── События ───────────────────────────────────── */
+els.startBtn.addEventListener('click', () => {
+  ensureAudio();
+  startBattle();
+});
+
+els.randomBtn.addEventListener('click', () => {
+  randomizeFleet();
+});
+
+els.clearBtn.addEventListener('click', () => {
+  clearFleet();
+});
+
+els.rotateBtn.addEventListener('click', () => {
+  rotateShip();
+});
+
+els.muteBtn.addEventListener('click', () => {
+  ensureAudio();
+  toggleMute();
+});
+
+els.againBtn.addEventListener('click', () => {
+  resetGame();
+});
+
+els.shipDock.addEventListener('click', (e) => {
+  const card = e.target.closest('.ship-card');
+  if (!card || card.disabled) return;
+  ensureAudio();
+  const id = Number(card.dataset.ship);
+  if (playerShips.some((s) => s.id === id)) return;
+  selected = id;
+  renderDock();
+  updatePlacementUI();
+  placementStatus();
+  if (hoverCell) showGhost(hoverCell.x, hoverCell.y);
+  sfxSelect();
+});
+
+els.playerBoard.addEventListener('click', (e) => {
+  const cell = e.target.closest('.cell');
+  if (!cell || phase !== 'placement') return;
+  ensureAudio();
+  placeShip(Number(cell.dataset.x), Number(cell.dataset.y));
+});
+
+els.playerBoard.addEventListener('pointermove', (e) => {
+  if (phase !== 'placement' || selected === null || e.pointerType === 'touch') return;
+  const cell = e.target.closest('.cell');
+  if (!cell) {
+    hoverCell = null;
+    clearGhost();
+    return;
+  }
+  hoverCell = { x: Number(cell.dataset.x), y: Number(cell.dataset.y) };
+  showGhost(hoverCell.x, hoverCell.y);
+});
+
+els.playerBoard.addEventListener('pointerleave', () => {
+  hoverCell = null;
+  clearGhost();
+});
+
+els.playerBoard.addEventListener('contextmenu', (e) => {
+  if (phase === 'placement') {
+    e.preventDefault();
+    rotateShip();
+  }
+});
+
+els.enemyBoard.addEventListener('click', (e) => {
+  const cell = e.target.closest('.cell');
+  if (!cell) return;
+  ensureAudio();
+  playerShoot(Number(cell.dataset.x), Number(cell.dataset.y));
+});
+
+els.enemyBoard.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  if (e.code === 'KeyR' && phase === 'placement') {
+    e.preventDefault();
+    ensureAudio();
+    rotateShip();
+  } else if (e.code === 'KeyM') {
+    e.preventDefault();
+    ensureAudio();
+    toggleMute();
+  }
+});
+
+/* ── Старт ─────────────────────────────────────── */
+(function init() {
+  try {
+    best = Math.max(0, Math.floor(Number(localStorage.getItem('seabattle_best')) || 0));
+  } catch (e) { best = 0; }
+
+  try {
+    muted = localStorage.getItem('seabattle_muted') === '1';
+  } catch (e) { muted = false; }
+
+  buildBoard(els.playerBoard, playerCells);
+  buildBoard(els.enemyBoard, enemyCells);
+  syncMuteButton();
+
+  resetGame();
+})();
+</script>
+<script src="leaderboard.js"></script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }</script>
+</body>
+</html>

@@ -6,9 +6,9 @@
 <title>Brickyard Arcade — мини-игры</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a0d12">
-<meta name="description" content="Мини-игры в браузере: змейка, сапёр, 2048 и виселица. Плюс колесо фортуны для ивентов и мем-музей. Без установки и рекламы.">
+<meta name="description" content="Мини-игры в браузере: змейка, сапёр, 2048, виселица, тетрис и морской бой. Плюс колесо фортуны, турниры и мем-музей.">
 <meta property="og:title" content="Brickyard Arcade">
-<meta property="og:description" content="Змейка, сапёр, 2048, виселица, колесо фортуны и мем-музей — всё в браузере.">
+<meta property="og:description" content="Шесть игр, колесо фортуны, турниры и мем-музей — всё в браузере.">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹</text></svg>">
 <style>
@@ -97,6 +97,8 @@
   .snake .gicon{box-shadow:0 0 24px rgba(57,255,136,.18)}
   .mines .gicon{box-shadow:0 0 24px rgba(255,59,107,.16)}
   .g2048 .gicon{box-shadow:0 0 24px rgba(240,192,96,.18)}
+  .tetris .gicon{box-shadow:0 0 24px rgba(0,212,255,.18)}
+  .seabattle .gicon{box-shadow:0 0 24px rgba(57,255,136,.18)}
 
   .extras{margin-top:44px}
   .extras h2{font-size:26px; letter-spacing:-.4px; margin-bottom:6px}
@@ -115,6 +117,7 @@
   }
   .extra.wheel .eicon{box-shadow:0 0 24px rgba(240,192,96,.2)}
   .extra.museum .eicon{box-shadow:0 0 24px rgba(255,59,107,.16)}
+  .extra.tourney .eicon{box-shadow:0 0 24px rgba(240,192,96,.22)}
   .extra h3{font-size:19px; margin-bottom:7px}
   .extra p{color:var(--muted); font-size:13px; line-height:1.6}
   .extra .play{margin-top:12px}
@@ -131,6 +134,9 @@
   .reveal{opacity:0; transform:translateY(22px); animation:rise .6s forwards}
   .reveal:nth-child(2){animation-delay:.08s}
   .reveal:nth-child(3){animation-delay:.16s}
+  .reveal:nth-child(4){animation-delay:.24s}
+  .reveal:nth-child(5){animation-delay:.32s}
+  .reveal:nth-child(6){animation-delay:.4s}
   @keyframes rise{to{opacity:1; transform:translateY(0)}}
 
   @media (max-width:900px){ .grid{grid-template-columns:1fr} .game p{min-height:0} }
@@ -153,8 +159,8 @@
   </div>
 
   <div class="hero">
-    <h2>Скучно?<br><span>Вот четыре игры. И ещё кое-что.</span></h2>
-    <p>Змейка, сапёр, 2048 и виселица — плюс колесо фортуны для ивентов и мем-музей сервера. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
+    <h2>Скучно?<br><span>Вот шесть игр. И ещё кое-что.</span></h2>
+    <p>Змейка, сапёр, 2048, виселица, тетрис и морской бой — плюс колесо фортуны для ивентов, турниры и мем-музей сервера. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
   </div>
 
   <div class="grid">
@@ -189,6 +195,22 @@
       <div class="tagrow"><span class="tag">слова</span><span class="tag">клавиатура</span><span class="tag">6 ошибок</span></div>
       <div class="play">Играть</div>
     </a>
+
+    <a class="game tetris reveal" href="tetris.html">
+      <div class="gicon">🧱</div>
+      <h3>Тетрис</h3>
+      <p>Падающие блоки, ускорение и мечта о тетрисе. Держи спину прямо.</p>
+      <div class="tagrow"><span class="tag">классика</span><span class="tag">скорость</span><span class="tag">рекорд</span></div>
+      <div class="play">Играть</div>
+    </a>
+
+    <a class="game seabattle reveal" href="seabattle.html">
+      <div class="gicon">🚢</div>
+      <h3>Морской бой</h3>
+      <p>Расставь флот и переиграй ИИ. Каждый выстрел — на вес золота.</p>
+      <div class="tagrow"><span class="tag">логика</span><span class="tag">ИИ</span><span class="tag">флот</span></div>
+      <div class="play">Играть</div>
+    </a>
   </div>
 
   <section class="extras">
@@ -211,6 +233,14 @@
           <div class="play">Зайти в музей</div>
         </div>
       </a>
+      <a class="extra tourney reveal" href="tournament.html">
+        <div class="eicon">🏆</div>
+        <div>
+          <h3>Турниры</h3>
+          <p>Сетка на вылет, 4/8/16 игроков и чемпион. Бот сам ведёт матчи.</p>
+          <div class="play">К турнирам</div>
+        </div>
+      </a>
     </div>
   </section>
 
@@ -222,6 +252,8 @@
       <div class="lb" data-lb="mines" data-lb-title="💣 Сапёр"></div>
       <div class="lb" data-lb="g2048" data-lb-title="🔢 2048"></div>
       <div class="lb" data-lb="hangman" data-lb-title="🪢 Виселица"></div>
+      <div class="lb" data-lb="tetris" data-lb-title="🧱 Тетрис"></div>
+      <div class="lb" data-lb="seabattle" data-lb-title="🚢 Морской бой"></div>
     </div>
     <p class="lbn">Пока локальные: у каждого свои. Онлайн-таблицу можно поднять позже через <a class="worker-link" href="wheel-studio-9f2c.html">воркер</a>.</p>
   </section>

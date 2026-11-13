@@ -1,4 +1,4 @@
-const CACHE = 'arcade-v2';
+const CACHE = 'arcade-v3';
 const ASSETS = [
   './',
   'index.html',
@@ -6,9 +6,12 @@ const ASSETS = [
   'minesweeper.html',
   '2048.html',
   'hangman.html',
+  'tetris.html',
+  'seabattle.html',
   'thanks.html',
   'memes.html',
   'wheel.html',
+  'tournament.html',
   'leaderboard.js',
   'manifest.webmanifest',
   'icon-192.png',

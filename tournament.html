@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Турниры — Brickyard Arcade</title>
+<meta name="theme-color" content="#0a0d12">
+<meta name="description" content="Турниры Brickyard по мини-играм: сетка на вылет, 4/8/16 игроков, чемпион забирает славу.">
+<meta property="og:title" content="Турниры Brickyard">
+<meta property="og:description" content="Один победитель. Остальные — в сетке.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --cyan:#00d4ff; --gold:#f0c060; --pink:#ff3b6b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    min-height:100vh; color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(900px 500px at 12% -10%, rgba(240,192,96,.15), transparent 60%),
+      radial-gradient(800px 500px at 92% 0%, rgba(155,89,182,.12), transparent 55%),
+      radial-gradient(700px 600px at 50% 110%, rgba(0,212,255,.08), transparent 60%),
+      var(--bg);
+    padding:34px 22px 60px;
+  }
+  .wrap{max-width:1100px; margin:0 auto}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:38px; flex-wrap:wrap}
+  .brand{display:flex; align-items:center; gap:12px}
+  .logo{
+    width:44px; height:44px; border-radius:13px; display:grid; place-items:center; font-size:22px;
+    background:linear-gradient(145deg,#2a2230,#0f1720); border:1px solid var(--line);
+    box-shadow:0 0 26px rgba(240,192,96,.2);
+  }
+  .brand h1{font-size:20px; letter-spacing:2px; font-weight:800}
+  .brand small{display:block; color:var(--muted); font-size:11px; letter-spacing:2.5px; margin-top:2px}
+  .links{display:flex; gap:10px; flex-wrap:wrap}
+  a.btn{
+    text-decoration:none; color:var(--text); font-size:13px; padding:10px 16px; border-radius:10px;
+    border:1px solid var(--line); background:rgba(255,255,255,.02); transition:.2s;
+  }
+  a.btn:hover{border-color:rgba(240,192,96,.5); transform:translateY(-2px)}
+
+  .hero{margin-bottom:34px; max-width:780px}
+  .hero h2{font-size:clamp(32px,5vw,54px); letter-spacing:-1px; line-height:1.04}
+  .hero h2 span{
+    background:linear-gradient(100deg,var(--gold),var(--pink));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero p{color:var(--muted); font-size:16px; margin-top:14px; line-height:1.65}
+
+  .steps{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin:30px 0 38px}
+  .step{
+    background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95));
+    border:1px solid var(--line); border-radius:16px; padding:18px;
+  }
+  .step .n{
+    display:inline-grid; place-items:center; width:30px; height:30px; border-radius:9px;
+    background:rgba(240,192,96,.1); border:1px solid rgba(240,192,96,.35); color:var(--gold);
+    font-size:13px; font-weight:800; margin-bottom:12px;
+  }
+  .step h3{font-size:16px; margin-bottom:7px}
+  .step p{color:var(--muted); font-size:13px; line-height:1.6}
+
+  h2.section{font-size:26px; letter-spacing:-.4px; margin-bottom:6px}
+  .sub{color:var(--muted); font-size:14px; margin-bottom:16px}
+
+  .games{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+  .game{
+    display:block; text-decoration:none; color:inherit; position:relative; overflow:hidden;
+    background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95));
+    border:1px solid var(--line); border-radius:16px; padding:18px;
+    transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  }
+  .game:hover{transform:translateY(-5px); border-color:rgba(57,255,136,.35); box-shadow:0 20px 50px rgba(0,0,0,.45)}
+  .game .icon{font-size:26px; margin-bottom:10px}
+  .game h3{font-size:17px; margin-bottom:6px}
+  .game p{color:var(--muted); font-size:12px; line-height:1.55}
+  .game .play{display:inline-flex; align-items:center; gap:7px; margin-top:12px; color:var(--neon); font-size:12px; font-weight:700}
+  .game .play::after{content:"→"; transition:transform .2s}
+  .game:hover .play::after{transform:translateX(4px)}
+
+  .rules{
+    margin-top:38px; background:linear-gradient(160deg,rgba(25,36,48,.78),rgba(11,16,22,.92));
+    border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:16px; padding:22px;
+  }
+  .rules h2{font-size:18px; margin-bottom:10px}
+  .rules ul{list-style:none; display:flex; flex-direction:column; gap:8px}
+  .rules li{color:var(--muted); font-size:13px; line-height:1.6; padding-left:18px; position:relative}
+  .rules li::before{content:"•"; position:absolute; left:2px; color:var(--gold)}
+
+  .cta{
+    margin-top:24px; text-align:center; padding:24px 18px;
+    background:linear-gradient(160deg,rgba(240,192,96,.08),rgba(155,89,182,.06));
+    border:1px solid rgba(240,192,96,.25); border-radius:16px;
+  }
+  .cta h2{font-size:20px; margin-bottom:8px}
+  .cta p{color:var(--muted); font-size:13px; line-height:1.6; max-width:620px; margin:0 auto 16px}
+  .cta .big{
+    display:inline-block; text-decoration:none; color:#191207; font-weight:900; font-size:14px; letter-spacing:.6px;
+    padding:13px 26px; border-radius:10px; background:linear-gradient(135deg,#ffd978,#f0c060 55%,#d99a2b);
+    box-shadow:0 10px 26px rgba(240,192,96,.25);
+  }
+
+  footer{margin-top:44px; padding-top:20px; border-top:1px solid var(--line);
+         display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+         color:var(--muted); font-size:13px}
+  footer a{color:var(--muted); text-decoration:none}
+  footer a:hover{color:var(--text)}
+
+  @media (max-width:900px){
+    .games{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:560px){
+    .games{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">🏆</div>
+      <div>
+        <h1>ТУРНИРЫ</h1>
+        <small>BRICKYARD · СЕТКА НА ВЫЛЕТ</small>
+      </div>
+    </div>
+    <div class="links">
+      <a class="btn" href="index.html">← В аркаду</a>
+      <a class="btn" href="https://discord.gg/nWAATWnnnJ" target="_blank" rel="noopener">В Discord</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h2>Один победитель.<br><span>Остальные — в сетке.</span></h2>
+    <p>Турнир по любой игре аркады: 4, 8 или 16 человек, одна сетка на вылет. Бот сам собирает пары, ведёт счёт матчей и объявляет чемпиона.</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="n">1</div>
+      <h3>Админ создаёт</h3>
+      <p>В Discord: <b>/tournament create</b> — название, игра и размер сетки. Создатель сразу записан.</p>
+    </div>
+    <div class="step">
+      <div class="n">2</div>
+      <h3>Игроки записываются</h3>
+      <p>Жми кнопку «Участвовать» под сообщением бота или пиши <b>/tournament join</b>.</p>
+    </div>
+    <div class="step">
+      <div class="n">3</div>
+      <h3>Сетка оживает</h3>
+      <p>Когда набралось минимум 4 человека, админ жмёт «Начать турнир». Бот раздаёт пары и показывает ID матчей.</p>
+    </div>
+    <div class="step">
+      <div class="n">4</div>
+      <h3>Результат — в бота</h3>
+      <p>После матча админ пишет <b>/tournament result</b>, указывает ID матча и победителя. Сетка обновляется сама.</p>
+    </div>
+  </div>
+
+  <h2 class="section">Во что играем</h2>
+  <div class="sub">Любая игра аркады. Выбирай ту, где у тебя есть шанс.</div>
+  <div class="games">
+    <a class="game" href="snake.html">
+      <div class="icon">🐍</div><h3>Змейка</h3>
+      <p>Классика на скорость и нервы. Одно неверное движение — и ты в стене.</p>
+      <div class="play">Играть</div>
+    </a>
+    <a class="game" href="minesweeper.html">
+      <div class="icon">💣</div><h3>Сапёр</h3>
+      <p>Логика, флажки и таймер. Кто быстрее разминирует — тот и молодец.</p>
+      <div class="play">Играть</div>
+    </a>
+    <a class="game" href="2048.html">
+      <div class="icon">🔢</div><h3>2048</h3>
+      <p>Складывай плитки и не задуши поле. Просто, но затягивает.</p>
+      <div class="play">Играть</div>
+    </a>
+    <a class="game" href="hangman.html">
+      <div class="icon">🪢</div><h3>Виселица</h3>
+      <p>Угадай слово по буквам. Шесть ошибок — и человечек нарисован.</p>
+      <div class="play">Играть</div>
+    </a>
+    <a class="game" href="seabattle.html">
+      <div class="icon">🚢</div><h3>Морской бой</h3>
+      <p>Расставь флот и переиграй ИИ. Каждый выстрел — на вес золота.</p>
+      <div class="play">Играть</div>
+    </a>
+    <a class="game" href="tetris.html">
+      <div class="icon">🧱</div><h3>Тетрис</h3>
+      <p>Падающие блоки, ускорение и мечта о тетрисе. Держи спину прямо.</p>
+      <div class="play">Играть</div>
+    </a>
+  </div>
+
+  <div class="rules">
+    <h2>Правила простые</h2>
+    <ul>
+      <li>Один матч — одна игра. Победитель проходит дальше, проигравший вылетает.</li>
+      <li>Сетка на 4, 8 или 16 игроков. Если людей меньше — часть проходит дальше автоматически (bye).</li>
+      <li>Результаты вносит админ командой <b>/tournament result</b>. ID матча и победитель — обязательны.</li>
+      <li>Спорные моменты решает админ. Скриншоты приветствуются, но не обязательны.</li>
+      <li>Чемпион получает славу, уважение и место в истории. И, возможно, что-то от владельца сервера.</li>
+    </ul>
+  </div>
+
+  <div class="cta">
+    <h2>Готов? Тогда в Discord.</h2>
+    <p>Админ создаёт турнир, ты жмёшь «Участвовать». Всё остальное — магия бота.</p>
+    <a class="big" href="https://discord.gg/nWAATWnnnJ" target="_blank" rel="noopener">Открыть Discord</a>
+  </div>
+
+  <footer>
+    <div>© Brickyard Arcade · турниры без читов, но с азартом</div>
+    <div><a href="index.html">аркада</a> · <a href="wheel.html">колесо</a> · <a href="memes.html">музей</a> · <a href="https://att4cking-812.github.io/brickyard/">brickyard</a></div>
+  </footer>
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
