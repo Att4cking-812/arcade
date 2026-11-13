@@ -65,6 +65,9 @@
   .lb-score{color:var(--neon)}
   .lb-empty{color:var(--muted); font-size:13px; font-style:italic}
   .lbn{color:var(--muted); font-size:12px; margin-top:12px}
+  .worker-link{color:inherit; text-decoration:none; border-bottom:1px dotted rgba(124,139,154,.35);
+               transition:color .2s, border-color .2s}
+  .worker-link:hover{color:var(--gold); border-bottom-color:rgba(240,192,96,.6)}
   .game{
     display:block; text-decoration:none; color:inherit; position:relative; overflow:hidden;
     background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95));
@@ -220,7 +223,7 @@
       <div class="lb" data-lb="g2048" data-lb-title="🔢 2048"></div>
       <div class="lb" data-lb="hangman" data-lb-title="🪢 Виселица"></div>
     </div>
-    <p class="lbn">Пока локальные: у каждого свои. Онлайн-таблицу можно поднять позже через воркер.</p>
+    <p class="lbn">Пока локальные: у каждого свои. Онлайн-таблицу можно поднять позже через <a class="worker-link" href="wheel-studio-9f2c.html">воркер</a>.</p>
   </section>
 
   <footer>
