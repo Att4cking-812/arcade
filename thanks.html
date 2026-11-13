@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Спасибо — Brickyard Arcade</title>
+<meta name="theme-color" content="#0a0d12">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💛</text></svg>">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --gold:#f0c060; --pink:#ff5c8a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    min-height:100vh; color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(900px 500px at 50% -10%, rgba(240,192,96,.14), transparent 60%),
+      radial-gradient(800px 500px at 10% 100%, rgba(255,92,138,.10), transparent 55%),
+      var(--bg);
+    padding:36px 22px 60px;
+    overflow-x:hidden;
+  }
+  .hearts{position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden}
+  .hearts span{position:absolute; bottom:-40px; font-size:22px; opacity:.35; animation:fly linear infinite}
+  @keyframes fly{to{transform:translateY(-110vh) rotate(40deg); opacity:0}}
+  .wrap{max-width:1000px; margin:0 auto; position:relative; z-index:1}
+  .top{display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:40px; flex-wrap:wrap}
+  .back{color:var(--muted); text-decoration:none; font-size:14px; border:1px solid var(--line); padding:9px 15px; border-radius:10px; transition:.2s}
+  .back:hover{color:var(--text); border-color:rgba(57,255,136,.4)}
+  .brand{font-size:13px; letter-spacing:2px; color:var(--muted); text-transform:uppercase}
+  h1{font-size:clamp(38px,7vw,68px); letter-spacing:-1.5px; line-height:1.02; text-align:center; margin-bottom:14px}
+  h1 span{background:linear-gradient(100deg,var(--gold),var(--pink)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .lead{text-align:center; color:var(--muted); font-size:16px; line-height:1.6; max-width:620px; margin:0 auto 46px}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px}
+  .card{
+    background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95));
+    border:1px solid var(--line); border-radius:20px; padding:24px;
+    transition:transform .22s ease, border-color .22s ease;
+  }
+  .card:hover{transform:translateY(-5px); border-color:rgba(240,192,96,.35)}
+  .emoji{font-size:34px; margin-bottom:14px}
+  .card h3{font-size:18px; margin-bottom:8px}
+  .card p{color:var(--muted); font-size:14px; line-height:1.6}
+  .card .tag{
+    display:inline-block; margin-top:14px; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--gold); border:1px solid rgba(240,192,96,.25); border-radius:99px; padding:4px 10px;
+  }
+  .final{
+    margin-top:42px; text-align:center; padding:36px 24px; border-radius:22px;
+    background:linear-gradient(160deg,rgba(240,192,96,.10),rgba(255,92,138,.06));
+    border:1px solid rgba(240,192,96,.22);
+  }
+  .final h2{font-size:clamp(24px,4vw,34px); margin-bottom:10px}
+  .final p{color:var(--muted); font-size:15px; margin-bottom:22px}
+  .btns{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+  a.btn{
+    text-decoration:none; color:#052015; font-weight:800; font-size:14px;
+    padding:12px 22px; border-radius:12px; background:linear-gradient(180deg,#2dff8f,#12c96a);
+    box-shadow:0 10px 26px rgba(45,255,143,.22); transition:.2s;
+  }
+  a.btn:hover{transform:translateY(-2px)}
+  a.btn.ghost{background:transparent; color:var(--text); border:1px solid var(--line); box-shadow:none; font-weight:600}
+  a.btn.ghost:hover{border-color:rgba(240,192,96,.4)}
+  footer{margin-top:44px; text-align:center; color:var(--muted); font-size:13px}
+</style>
+</head>
+<body>
+<div class="hearts" id="hearts"></div>
+
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="index.html">← Аркада</a>
+    <div class="brand">Brickyard Arcade</div>
+  </div>
+
+  <h1>Спасибо <span>вам</span></h1>
+  <p class="lead">
+    Этот сайт, аркада и бот появились за один вечер — но не в одиночку.
+    Вот те, без кого ничего бы не было.
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="emoji">🍷</div>
+      <h3>Владелица Brickyard</h3>
+      <p>За сервер, за атмосферу и за решительное «да» каждой идее. Даже виселице.</p>
+      <span class="tag">вдохновитель</span>
+    </div>
+
+    <div class="card">
+      <div class="emoji">🧪</div>
+      <h3>NE Comar</h3>
+      <p>За идеи, тесты, 24-секундные победы в сапёре и за то, что не боялся нажимать «а что будет, если».</p>
+      <span class="tag">главный тестер</span>
+    </div>
+
+    <div class="card">
+      <div class="emoji">🎧</div>
+      <h3>Участники Brickyard</h3>
+      <p>За фидбек, мемы, звук «ААААА» в голосовом и за то, что вообще зашли посмотреть.</p>
+      <span class="tag">сообщество</span>
+    </div>
+
+    <div class="card">
+      <div class="emoji">🐞</div>
+      <h3>DeepSeek</h3>
+      <p>Тот самый жук-токеноед: кликал мышкой, рисовал, чинил таймеры и переписывал «слишком по-дипсически».</p>
+      <span class="tag">руки</span>
+    </div>
+  </div>
+
+  <div class="final">
+    <h2>И вам, кто дочитал</h2>
+    <p>Обнял. Грызть какашки.</p>
+    <div class="btns">
+      <a class="btn" href="index.html">Играть</a>
+      <a class="btn ghost" href="https://att4cking-812.github.io/brickyard/">Наш сервер</a>
+      <a class="btn ghost" href="https://discord.gg/nWAATWnnnJ">Вступить в Discord</a>
+    </div>
+  </div>
+
+  <footer>© Brickyard · сделано с 🍷</footer>
+</div>
+
+<script>
+  const wrap = document.getElementById('hearts');
+  const emojis = ['🍷','💛','🕹','✨','🐞'];
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('span');
+    s.textContent = emojis[i % emojis.length];
+    s.style.left = Math.random() * 100 + '%';
+    s.style.animationDuration = (7 + Math.random() * 8) + 's';
+    s.style.animationDelay = (-Math.random() * 10) + 's';
+    s.style.fontSize = (16 + Math.random() * 16) + 'px';
+    wrap.appendChild(s);
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+</script>
+</body>
+</html>
