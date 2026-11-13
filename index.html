@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brickyard Arcade — мини-игры</title>
+<meta name="description" content="Три мини-игры в браузере: змейка, сапёр и 2048. Без установки, без рекламы.">
+<meta property="og:title" content="Brickyard Arcade">
+<meta property="og:description" content="Змейка, сапёр и 2048 — играй прямо в браузере.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹</text></svg>">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --cyan:#00d4ff; --gold:#f0c060; --pink:#ff3b6b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    min-height:100vh; color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(0,212,255,.16), transparent 60%),
+      radial-gradient(800px 500px at 90% 0%, rgba(57,255,136,.10), transparent 55%),
+      radial-gradient(700px 600px at 50% 110%, rgba(240,192,96,.08), transparent 60%),
+      var(--bg);
+    padding:34px 22px 60px;
+  }
+  .wrap{max-width:1100px; margin:0 auto}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:38px; flex-wrap:wrap}
+  .brand{display:flex; align-items:center; gap:12px}
+  .logo{
+    width:44px; height:44px; border-radius:13px; display:grid; place-items:center; font-size:22px;
+    background:linear-gradient(145deg,#1b2b3a,#0f1720); border:1px solid var(--line);
+    box-shadow:0 0 26px rgba(0,212,255,.18);
+  }
+  .brand h1{font-size:20px; letter-spacing:2px; font-weight:800}
+  .brand small{display:block; color:var(--muted); font-size:11px; letter-spacing:2.5px; margin-top:2px}
+  .links{display:flex; gap:10px}
+  a.btn{
+    text-decoration:none; color:var(--text); font-size:13px; padding:10px 16px; border-radius:10px;
+    border:1px solid var(--line); background:rgba(255,255,255,.02); transition:.2s;
+  }
+  a.btn:hover{border-color:rgba(57,255,136,.45); transform:translateY(-2px)}
+
+  .hero{margin-bottom:34px}
+  .hero h2{font-size:clamp(32px,5vw,52px); letter-spacing:-1px; line-height:1.05}
+  .hero h2 span{
+    background:linear-gradient(100deg,var(--neon),var(--cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero p{color:var(--muted); font-size:16px; margin-top:12px; max-width:560px; line-height:1.6}
+
+  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px}
+  .game{
+    display:block; text-decoration:none; color:inherit; position:relative; overflow:hidden;
+    background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95));
+    border:1px solid var(--line); border-radius:20px; padding:24px;
+    transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  }
+  .game::after{
+    content:""; position:absolute; inset:-40% -20% auto auto; width:220px; height:220px;
+    background:radial-gradient(circle, rgba(57,255,136,.16), transparent 65%);
+    opacity:0; transition:opacity .25s; pointer-events:none;
+  }
+  .game:hover{transform:translateY(-6px); border-color:rgba(57,255,136,.35); box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .game:hover::after{opacity:1}
+  .gicon{
+    width:56px; height:56px; border-radius:16px; display:grid; place-items:center; font-size:26px;
+    background:rgba(255,255,255,.04); border:1px solid var(--line); margin-bottom:18px;
+  }
+  .game h3{font-size:22px; margin-bottom:8px}
+  .game p{color:var(--muted); font-size:14px; line-height:1.6; min-height:66px}
+  .tagrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px}
+  .tag{font-size:11px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted);
+       border:1px solid var(--line); padding:4px 10px; border-radius:99px}
+  .play{display:inline-flex; align-items:center; gap:8px; margin-top:18px; font-weight:700; color:var(--neon); font-size:14px}
+  .play::after{content:"→"; transition:transform .2s}
+  .game:hover .play::after{transform:translateX(4px)}
+
+  .snake .gicon{box-shadow:0 0 24px rgba(57,255,136,.18)}
+  .mines .gicon{box-shadow:0 0 24px rgba(255,59,107,.16)}
+  .g2048 .gicon{box-shadow:0 0 24px rgba(240,192,96,.18)}
+
+  footer{margin-top:44px; padding-top:20px; border-top:1px solid var(--line);
+         display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+         color:var(--muted); font-size:13px}
+  footer a{color:var(--muted); text-decoration:none}
+  footer a:hover{color:var(--text)}
+
+  .reveal{opacity:0; transform:translateY(22px); animation:rise .6s forwards}
+  .reveal:nth-child(2){animation-delay:.08s}
+  .reveal:nth-child(3){animation-delay:.16s}
+  @keyframes rise{to{opacity:1; transform:translateY(0)}}
+
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} .game p{min-height:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">🕹</div>
+      <div>
+        <h1>BRICKYARD ARCADE</h1>
+        <small>МИНИ-ИГРЫ В БРАУЗЕРЕ</small>
+      </div>
+    </div>
+    <div class="links">
+      <a class="btn" href="https://att4cking-812.github.io/brickyard/" target="_blank" rel="noopener">🍷 Наш сервер</a>
+      <a class="btn" href="https://discord.gg/nWAATWnnnJ" target="_blank" rel="noopener">Вступить</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h2>Три классики.<br><span>Ноль установки.</span></h2>
+    <p>Открывай и играй — всё работает прямо в браузере, рекорды сохраняются локально.</p>
+  </div>
+
+  <div class="grid">
+    <a class="game snake reveal" href="snake.html">
+      <div class="gicon">🐍</div>
+      <h3>Змейка</h3>
+      <p>Ешь яблоки, расти и не врезайся в стены и в себя. Скорость постепенно растёт.</p>
+      <div class="tagrow"><span class="tag">классика</span><span class="tag">рекорд</span><span class="tag">звук</span></div>
+      <div class="play">Играть</div>
+    </a>
+
+    <a class="game mines reveal" href="minesweeper.html">
+      <div class="gicon">💣</div>
+      <h3>Сапёр</h3>
+      <p>Открывай клетки, ставь флажки и не подорвись. Три уровня сложности и таймер.</p>
+      <div class="tagrow"><span class="tag">логика</span><span class="tag">3 уровня</span><span class="tag">таймер</span></div>
+      <div class="play">Играть</div>
+    </a>
+
+    <a class="game g2048 reveal" href="2048.html">
+      <div class="gicon">🔢</div>
+      <h3>2048</h3>
+      <p>Складывай одинаковые числа, двигай плитки и собери заветную 2048.</p>
+      <div class="tagrow"><span class="tag">числа</span><span class="tag">свайпы</span><span class="tag">рекорд</span></div>
+      <div class="play">Играть</div>
+    </a>
+  </div>
+
+  <footer>
+    <div>© Brickyard Arcade · сделано с 🍷</div>
+    <div><a href="https://att4cking-812.github.io/brickyard/">brickyard</a> · <a href="https://discord.gg/nWAATWnnnJ">discord</a></div>
+  </footer>
+</div>
+</body>
+</html>
