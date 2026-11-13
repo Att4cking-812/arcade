@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Змейка</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121a23; --neon:#39ff88; --neon2:#00d4ff;
+    --food:#ff3b6b; --text:#e8f1f8; --muted:#7c8b9a;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; background:
+      radial-gradient(1200px 600px at 50% -10%, #16324a 0%, transparent 60%),
+      radial-gradient(800px 500px at 100% 100%, #1b3b2f 0%, transparent 55%),
+      var(--bg);
+    color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .wrap{display:flex; gap:28px; align-items:flex-start}
+  .title{font-size:28px; font-weight:800; letter-spacing:2px; margin:0 0 4px}
+  .title span{color:var(--neon); text-shadow:0 0 18px rgba(57,255,136,.6)}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:14px}
+  .board{
+    position:relative; border-radius:18px; padding:10px;
+    background:linear-gradient(145deg,#0f1720,#0a1118);
+    box-shadow:0 0 0 1px #1d2a36, 0 20px 60px rgba(0,0,0,.6), 0 0 60px rgba(0,212,255,.08);
+  }
+  canvas{display:block; border-radius:12px; background:#0a1017}
+  .side{width:230px; display:flex; flex-direction:column; gap:14px}
+  .card{
+    background:linear-gradient(160deg,#121b25,#0e151d); border:1px solid #1e2b38;
+    border-radius:14px; padding:14px 16px;
+  }
+  .label{font-size:11px; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase}
+  .value{font-size:30px; font-weight:800; color:var(--neon); text-shadow:0 0 14px rgba(57,255,136,.35)}
+  .value.best{color:var(--neon2); text-shadow:0 0 14px rgba(0,212,255,.35)}
+  .top{list-style:none; margin:0; padding:0; font-size:14px}
+  .top li{display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed #1e2b38; color:#cdd9e5}
+  .top li:last-child{border-bottom:0}
+  .top li span:first-child{color:var(--muted); width:22px}
+  .top li span:last-child{color:#8fa2b4; font-size:12px}
+  .top .empty{color:var(--muted); font-style:italic}
+  .keys{font-size:13px; line-height:1.9; color:#b9c6d3}
+  kbd{
+    background:#1b2733; border:1px solid #2a3a4a; border-bottom-width:2px;
+    border-radius:6px; padding:1px 7px; font-size:12px; color:#dfe9f2;
+  }
+  .overlay{
+    position:absolute; inset:10px; border-radius:12px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:12px; text-align:center;
+    background:rgba(6,10,14,.82); backdrop-filter:blur(3px); opacity:0; pointer-events:none;
+    transition:opacity .25s;
+  }
+  .overlay.show{opacity:1; pointer-events:auto}
+  .overlay h2{margin:0; font-size:34px; letter-spacing:1px}
+  .overlay p{margin:0; color:var(--muted)}
+  button{
+    margin-top:6px; padding:11px 26px; border-radius:10px; border:0; cursor:pointer;
+    background:linear-gradient(180deg,#2dff8f,#12c96a); color:#052015; font-weight:800;
+    letter-spacing:.5px; font-size:15px; box-shadow:0 8px 24px rgba(45,255,143,.25);
+  }
+  button:hover{filter:brightness(1.08)}
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:#121c26; border:1px solid #22303d; padding:10px 18px; border-radius:10px;
+    font-size:13px; color:#cfe0ee; opacity:0; transition:.3s; pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1 class="title">ЗМЕЙ<span>КА</span></h1>
+    <div class="sub">стрелки или WASD · Space — пауза · R — заново</div>
+    <div class="board">
+      <canvas id="c" width="576" height="576"></canvas>
+      <div class="overlay show" id="ov">
+        <h2 id="ovTitle">Змейка</h2>
+        <p id="ovText">Съешь как можно больше.</p>
+        <button id="btn">Играть</button>
+      </div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="card">
+      <div class="label">Счёт</div>
+      <div class="value" id="score">0</div>
+    </div>
+    <div class="card">
+      <div class="label">Рекорд</div>
+      <div class="value best" id="best">0</div>
+    </div>
+    <div class="card">
+      <div class="label">Топ-5</div>
+      <ol class="top" id="top5"></ol>
+    </div>
+    <div class="card keys">
+      <div><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> — движение</div>
+      <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — тоже</div>
+      <div><kbd>Space</kbd> — пауза</div>
+      <div><kbd>R</kbd> — начать заново</div>
+      <div><kbd>M</kbd> — звук вкл/выкл</div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const CELL = 24, COLS = canvas.width / CELL, ROWS = canvas.height / CELL;
+
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const topEl = document.getElementById('top5');
+const ov = document.getElementById('ov');
+const ovTitle = document.getElementById('ovTitle');
+const ovText = document.getElementById('ovText');
+const btn = document.getElementById('btn');
+const toast = document.getElementById('toast');
+
+let snake, dir, nextDir, food, score, best, speed, acc, last, running, over, paused;
+let particles = [];
+let top5 = [];
+try { best = +(localStorage.getItem('snake_best') || 0); } catch(e){ best = 0; }
+bestEl.textContent = best;
+
+function loadTop(){
+  try { top5 = JSON.parse(localStorage.getItem('snake_top5') || '[]') || []; }
+  catch(e){ top5 = []; }
+  renderTop();
+}
+function renderTop(){
+  if (!top5.length){
+    topEl.innerHTML = '<li class="empty">пока пусто</li>';
+    return;
+  }
+  topEl.innerHTML = top5.map((r, i) =>
+    `<li><span>${i + 1}.</span><b>${r.s}</b><span>${r.d || ''}</span></li>`
+  ).join('');
+}
+function saveTop(s){
+  if (s <= 0) return;
+  const d = new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+  top5.push({ s: s, d: d });
+  top5.sort((a, b) => b.s - a.s);
+  top5 = top5.slice(0, 5);
+  try { localStorage.setItem('snake_top5', JSON.stringify(top5)); } catch(e){}
+  renderTop();
+}
+loadTop();
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+function reset(){
+  ensureAudio();
+  snake = [{x:8,y:12},{x:7,y:12},{x:6,y:12}];
+  dir = {x:1,y:0};
+  nextDir = {x:1,y:0};
+  score = 0;
+  speed = 8;
+  acc = 0;
+  over = false;
+  paused = false;
+  particles = [];
+  placeFood();
+  scoreEl.textContent = 0;
+  ov.classList.remove('show');
+  running = true;
+  last = performance.now();
+}
+
+function placeFood(){
+  let p;
+  do {
+    p = {x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS)};
+  } while (snake.some(s => s.x === p.x && s.y === p.y));
+  food = p;
+  food.pulse = 0;
+}
+
+function step(){
+  dir = nextDir;
+  const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+  if (head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS) return gameOver('В стену!');
+  if (snake.some((s,i) => i < snake.length-1 && s.x === head.x && s.y === head.y)) return gameOver('В себя!');
+
+  snake.unshift(head);
+
+  if (head.x === food.x && head.y === food.y){
+    score++;
+    scoreEl.textContent = score;
+    burst(food.x, food.y);
+    sfxEat();
+    if (score % 5 === 0 && speed < 20) speed += 1;
+    placeFood();
+  } else {
+    snake.pop();
+  }
+}
+
+function burst(cx, cy){
+  for (let i=0;i<14;i++){
+    const a = Math.random()*Math.PI*2, sp = 1+Math.random()*3;
+    particles.push({x:cx*CELL+CELL/2, y:cy*CELL+CELL/2, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:1});
+  }
+}
+
+function gameOver(reason){
+  over = true; running = false;
+  sfxDie();
+  if (score > best){ best = score; try { localStorage.setItem('snake_best', best); } catch(e){} bestEl.textContent = best; }
+  saveTop(score);
+  ovTitle.textContent = 'Игра окончена';
+  ovText.textContent = reason + ' Счёт: ' + score;
+  btn.textContent = 'Ещё раз';
+  ov.classList.add('show');
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // сетка
+  ctx.strokeStyle = 'rgba(90,140,180,.07)';
+  ctx.lineWidth = 1;
+  for (let x=0;x<=COLS;x++){ ctx.beginPath(); ctx.moveTo(x*CELL+.5,0); ctx.lineTo(x*CELL+.5,canvas.height); ctx.stroke(); }
+  for (let y=0;y<=ROWS;y++){ ctx.beginPath(); ctx.moveTo(0,y*CELL+.5); ctx.lineTo(canvas.width,y*CELL+.5); ctx.stroke(); }
+
+  // еда
+  food.pulse = (food.pulse + 0.08) % (Math.PI*2);
+  const r = CELL*0.34 + Math.sin(food.pulse)*2;
+  ctx.save();
+  ctx.shadowColor = '#ff3b6b'; ctx.shadowBlur = 18;
+  ctx.fillStyle = '#ff3b6b';
+  ctx.beginPath(); ctx.arc(food.x*CELL+CELL/2, food.y*CELL+CELL/2, r, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // змейка
+  for (let i=snake.length-1;i>=0;i--){
+    const s = snake[i];
+    const t = i / Math.max(1, snake.length);
+    const px = s.x*CELL+2, py = s.y*CELL+2, sz = CELL-4;
+    ctx.save();
+    ctx.shadowColor = i===0 ? '#39ff88' : 'rgba(57,255,136,.5)';
+    ctx.shadowBlur = i===0 ? 22 : 8;
+    const grad = ctx.createLinearGradient(px, py, px+sz, py+sz);
+    grad.addColorStop(0, i===0 ? '#a8ffd0' : `rgba(57,255,136,${0.95-0.5*t})`);
+    grad.addColorStop(1, i===0 ? '#2bd97a' : `rgba(0,190,120,${0.9-0.5*t})`);
+    ctx.fillStyle = grad;
+    roundRect(px, py, sz, sz, 7);
+    ctx.fill();
+    ctx.restore();
+  }
+  // глаза
+  const h = snake[0];
+  if (h){
+    ctx.fillStyle = '#06281a';
+    const ex = h.x*CELL + CELL/2, ey = h.y*CELL + CELL/2;
+    const ox = dir.x*4, oy = dir.y*4;
+    ctx.beginPath(); ctx.arc(ex - 4 + ox, ey - 4 + oy, 2.6, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex + 4 + ox, ey - 4 + oy, 2.6, 0, 7); ctx.fill();
+  }
+
+  // частицы
+  for (let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life -= 0.03;
+    if (p.life <= 0){ particles.splice(i,1); continue; }
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = '#ff7a9c';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  if (paused && running){
+    ctx.fillStyle = 'rgba(6,10,14,.55)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#dfe9f2';
+    ctx.font = '700 34px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText('ПАУЗА', canvas.width/2, canvas.height/2);
+    ctx.font = '15px Segoe UI';
+    ctx.fillStyle = '#8fa2b4';
+    ctx.fillText('Space — продолжить', canvas.width/2, canvas.height/2 + 32);
+  }
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// ---------- звук ----------
+let actx = null, muted = false;
+function ensureAudio(){
+  try{
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  }catch(e){}
+}
+function beep(freq, dur, type, vol, when){
+  if (muted || !actx) return;
+  dur = dur || 0.08; type = type || 'triangle'; vol = vol || 0.16; when = when || 0;
+  const t = actx.currentTime + when;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(actx.destination);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+function sfxEat(){ beep(880, .07, 'triangle', .15); beep(1320, .1, 'triangle', .13, .055); }
+function sfxDie(){ beep(330,.16,'sawtooth',.16); beep(240,.2,'sawtooth',.15,.13); beep(130,.38,'sawtooth',.16,.3); }
+function sfxPause(){ beep(540,.07,'sine',.11); }
+function toggleMute(){
+  muted = !muted;
+  showToast(muted ? 'Звук выключен — M' : 'Звук включён — M');
+  if (!muted) beep(880,.08,'sine',.12);
+}
+
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min(100, now - last) / 1000;
+  last = now;
+  if (running && !paused){
+    acc += dt;
+    while (acc >= 1/speed){
+      acc -= 1/speed;
+      step();
+      if (over) break;
+    }
+  }
+  draw();
+}
+requestAnimationFrame(loop);
+
+function turn(nx, ny){
+  if (!running || paused) return;
+  if (nx === -dir.x && ny === -dir.y) return;
+  nextDir = {x:nx, y:ny};
+}
+
+window.addEventListener('keydown', e => {
+  ensureAudio();
+  const c = e.code;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(c)) e.preventDefault();
+  if (c === 'ArrowUp' || c === 'KeyW') turn(0,-1);
+  else if (c === 'ArrowDown' || c === 'KeyS') turn(0,1);
+  else if (c === 'ArrowLeft' || c === 'KeyA') turn(-1,0);
+  else if (c === 'ArrowRight' || c === 'KeyD') turn(1,0);
+  else if (c === 'Space'){
+    if (over) return;
+    paused = !paused;
+    if (paused){ showToast('Пауза'); sfxPause(); }
+  }
+  else if (c === 'KeyR'){ reset(); }
+  else if (c === 'KeyM'){ toggleMute(); }
+});
+
+btn.addEventListener('click', () => { ensureAudio(); reset(); });
+</script>
+</body>
+</html>
