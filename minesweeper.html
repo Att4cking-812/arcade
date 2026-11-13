@@ -82,7 +82,7 @@
 
   <div class="bar">
     <div class="stat"><b id="minesLeft">0</b><small>мин осталось</small></div>
-    <div class="stat"><b id="timer">0</b><small>секунд</small></div>
+    <div class="stat"><b id="timer">0:00</b><small>время</small></div>
     <div class="stat"><b id="flagsCount">0</b><small>флагов</small></div>
   </div>
 
@@ -127,6 +127,27 @@ let openedCount = 0;
 let timer = 0;
 let timerId = null;
 
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function stopTimer() {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+}
+
+function startTimer() {
+  if (timerId) return;
+  timerId = setInterval(() => {
+    timer++;
+    timerEl.textContent = fmtTime(timer);
+  }, 1000);
+}
+
 const boardEl = document.getElementById('board');
 const minesLeftEl = document.getElementById('minesLeft');
 const timerEl = document.getElementById('timer');
@@ -136,8 +157,8 @@ const ovTitle = document.getElementById('ovTitle');
 const ovText = document.getElementById('ovText');
 
 function newGame() {
-  clearInterval(timerId);
-  timer = 0; timerEl.textContent = '0';
+  stopTimer();
+  timer = 0; timerEl.textContent = '0:00';
   started = false; dead = false; won = false;
   flags = 0; openedCount = 0;
   flagsEl.textContent = '0';
@@ -207,11 +228,6 @@ function render() {
   }
 }
 
-function startTimer() {
-  if (timerId) return;
-  timerId = setInterval(() => { timer++; timerEl.textContent = timer; }, 1000);
-}
-
 function openCell(x, y) {
   const c = grid[y][x];
   if (!c || c.open || c.flag || dead || won) return;
@@ -225,7 +241,7 @@ function openCell(x, y) {
   if (c.mine) {
     c.open = true;
     dead = true;
-    clearInterval(timerId);
+    stopTimer();
     revealAll();
     finish('Взрыв!', 'Ты наступил на мину.');
     return;
@@ -265,10 +281,10 @@ function checkWin() {
   const total = cfg.cols * cfg.rows;
   if (openedCount === total - cfg.mines) {
     won = true;
-    clearInterval(timerId);
+    stopTimer();
     gotWin();
     revealAll();
-    finish('Победа!', `Все мины найдены за ${timer} сек.`);
+    finish('Победа!', `Все мины найдены за ${fmtTime(timer)}.`);
   }
 }
 
