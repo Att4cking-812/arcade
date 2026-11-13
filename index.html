@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Brickyard Arcade — мини-игры</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a0d12">
 <meta name="description" content="Три мини-игры в браузере: змейка, сапёр и 2048. Без установки, без рекламы.">
 <meta property="og:title" content="Brickyard Arcade">
 <meta property="og:description" content="Змейка, сапёр и 2048 — играй прямо в браузере.">
@@ -49,7 +51,20 @@
   }
   .hero p{color:var(--muted); font-size:16px; margin-top:12px; max-width:560px; line-height:1.6}
 
-  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px}
+  .boards{margin-top:44px}
+  .boards h2{font-size:26px; letter-spacing:-.4px; margin-bottom:6px}
+  .boards .sub{color:var(--muted); font-size:14px; margin-bottom:16px}
+  .lbgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+  .lb{background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95)); border:1px solid var(--line); border-radius:16px; padding:16px 18px}
+  .lb-title{font-size:14px; font-weight:700; color:var(--text); margin-bottom:10px}
+  .lb-row{display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px dashed rgba(255,255,255,.05); font-size:13px}
+  .lb-row:last-child{border-bottom:0}
+  .lb-pos{width:18px; color:var(--muted); font-size:12px}
+  .lb-name{flex:1; color:#cdd9e5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .lb-score{color:var(--neon)}
+  .lb-empty{color:var(--muted); font-size:13px; font-style:italic}
+  .lbn{color:var(--muted); font-size:12px; margin-top:12px}
   .game{
     display:block; text-decoration:none; color:inherit; position:relative; overflow:hidden;
     background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95));
@@ -113,8 +128,8 @@
   </div>
 
   <div class="hero">
-    <h2>Скучно?<br><span>Вот три игры.</span></h2>
-    <p>Змейка, сапёр и 2048. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
+    <h2>Скучно?<br><span>Вот четыре игры.</span></h2>
+    <p>Змейка, сапёр, 2048 и виселица. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
   </div>
 
   <div class="grid">
@@ -141,7 +156,27 @@
       <div class="tagrow"><span class="tag">числа</span><span class="tag">свайпы</span><span class="tag">рекорд</span></div>
       <div class="play">Играть</div>
     </a>
+
+    <a class="game hangman reveal" href="hangman.html">
+      <div class="gicon">🪢</div>
+      <h3>Виселица</h3>
+      <p>Угадай слово по буквам, пока человечек не нарисовался целиком. Шесть ошибок — и всё.</p>
+      <div class="tagrow"><span class="tag">слова</span><span class="tag">клавиатура</span><span class="tag">6 ошибок</span></div>
+      <div class="play">Играть</div>
+    </a>
   </div>
+
+  <section class="boards">
+    <h2>Рекорды</h2>
+    <div class="sub">Общие для этой машины — во всех играх аркады.</div>
+    <div class="lbgrid">
+      <div class="lb" data-lb="snake" data-lb-title="🐍 Змейка"></div>
+      <div class="lb" data-lb="mines" data-lb-title="💣 Сапёр"></div>
+      <div class="lb" data-lb="g2048" data-lb-title="🔢 2048"></div>
+      <div class="lb" data-lb="hangman" data-lb-title="🪢 Виселица"></div>
+    </div>
+    <p class="lbn">Пока локальные: у каждого свои. Онлайн-таблицу можно поднять позже через воркер.</p>
+  </section>
 
   <footer>
     <div id="secretTrigger">© Brickyard Arcade · сделано с 🍷</div>
@@ -154,6 +189,11 @@
   if (trigger) trigger.addEventListener('click', () => {
     window.location.href = 'minesweeper.html?secret=1';
   });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
 </script>
+<script src="leaderboard.js"></script>
 </body>
 </html>
