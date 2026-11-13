@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пропавший вайб — Brickyard Arcade</title>
+<meta name="theme-color" content="#0a0d12">
+<meta name="description" content="Интерактивная история Brickyard: найди пропавший вайб сервера. Выборы, статы и несколько концовок.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Brickyard Arcade">
+<meta property="og:title" content="Пропавший вайб — Brickyard Arcade">
+<meta property="og:description" content="Кирпич просит найти вайб сервера. Пёс, Пудж, Камина и Демон уже в деле.">
+<meta property="og:url" content="https://att4cking-812.github.io/arcade/quest.html">
+<meta property="og:image" content="https://att4cking-812.github.io/arcade/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --cyan:#00d4ff; --gold:#f0c060; --pink:#ff3b6b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  [hidden]{display:none!important}
+  body{
+    min-height:100vh; color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(900px 500px at 12% -10%, rgba(240,192,96,.14), transparent 60%),
+      radial-gradient(800px 500px at 92% 0%, rgba(155,89,182,.12), transparent 55%),
+      radial-gradient(700px 600px at 50% 110%, rgba(0,212,255,.08), transparent 60%),
+      var(--bg);
+    padding:30px 22px 54px;
+  }
+  .wrap{max-width:1080px; margin:0 auto}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:28px; flex-wrap:wrap}
+  .brand{display:flex; align-items:center; gap:12px}
+  .logo{
+    width:44px; height:44px; border-radius:13px; display:grid; place-items:center; font-size:22px;
+    background:linear-gradient(145deg,#2a2230,#0f1720); border:1px solid var(--line);
+    box-shadow:0 0 26px rgba(240,192,96,.18);
+  }
+  .brand h1{font-size:20px; letter-spacing:2px; font-weight:800}
+  .brand small{display:block; color:var(--muted); font-size:11px; letter-spacing:2.5px; margin-top:2px}
+  .links{display:flex; gap:10px; flex-wrap:wrap}
+  a.btn{
+    text-decoration:none; color:var(--text); font-size:13px; padding:10px 16px; border-radius:10px;
+    border:1px solid var(--line); background:rgba(255,255,255,.02); transition:.2s;
+  }
+  a.btn:hover{border-color:rgba(240,192,96,.5); transform:translateY(-2px)}
+
+  .layout{display:grid; grid-template-columns:320px minmax(0,1fr); gap:20px; align-items:start}
+  .portrait{
+    background:linear-gradient(165deg,rgba(25,36,48,.92),rgba(11,16,22,.96));
+    border:1px solid var(--line); border-radius:18px; padding:16px; text-align:center;
+  }
+  .portrait-frame{
+    position:relative; aspect-ratio:1; border-radius:14px; background:#0c1219; border:1px solid var(--line);
+    overflow:hidden; display:grid; place-items:center;
+  }
+  .portrait-frame img{width:100%; height:100%; object-fit:contain; display:block}
+  .portrait-emoji{font-size:96px; line-height:1; filter:drop-shadow(0 10px 30px rgba(0,0,0,.5))}
+  .speaker{margin-top:12px; font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold)}
+  .speaker-sub{color:var(--muted); font-size:11px; margin-top:4px}
+
+  .panel{
+    background:linear-gradient(165deg,rgba(25,36,48,.92),rgba(11,16,22,.96));
+    border:1px solid var(--line); border-radius:18px; padding:22px; min-height:520px;
+    display:flex; flex-direction:column;
+  }
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px}
+  .stat{background:rgba(0,0,0,.18); border:1px solid var(--line); border-radius:12px; padding:10px 12px}
+  .stat-top{display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; color:var(--muted); margin-bottom:7px}
+  .stat-top b{color:var(--text); font-size:12px}
+  .bar{height:6px; border-radius:99px; background:rgba(255,255,255,.07); overflow:hidden}
+  .bar i{display:block; height:100%; width:0; border-radius:99px; transition:width .35s ease}
+  .vibe .bar i{background:linear-gradient(90deg,#2bd66f,var(--neon))}
+  .nerves .bar i{background:linear-gradient(90deg,#1b9ec9,var(--cyan))}
+  .poop .bar i{background:linear-gradient(90deg,#d99a2b,var(--gold))}
+
+  .chapter{color:var(--muted); font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px}
+  .scene-title{font-size:clamp(24px,3.2vw,34px); letter-spacing:-.5px; margin-bottom:12px; line-height:1.15}
+  .scene-text{
+    color:#d5e2ed; font-size:16px; line-height:1.72; white-space:pre-wrap;
+    min-height:140px; cursor:pointer;
+  }
+  .scene-text .caret{display:inline-block; width:8px; height:18px; background:var(--neon); margin-left:2px; vertical-align:-2px; animation:blink .8s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .choices{display:flex; flex-direction:column; gap:9px; margin-top:18px}
+  .choice{
+    font:inherit; text-align:left; color:var(--text); background:rgba(255,255,255,.025);
+    border:1px solid var(--line); border-radius:11px; padding:13px 15px; cursor:pointer;
+    transition:transform .16s, border-color .16s, background .16s;
+  }
+  .choice:hover{transform:translateX(4px); border-color:rgba(57,255,136,.45); background:rgba(57,255,136,.05)}
+  .choice:focus-visible{outline:2px solid var(--neon); outline-offset:2px}
+  .choice b{color:var(--gold); margin-right:8px}
+  .choice-hint{display:block; color:var(--muted); font-size:11px; margin-top:4px}
+
+  .game-footer{margin-top:auto; padding-top:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+  .small-btn{
+    font:inherit; font-size:12px; color:var(--muted); background:none; border:1px solid var(--line);
+    border-radius:9px; padding:8px 12px; cursor:pointer; transition:.15s;
+  }
+  .small-btn:hover{color:var(--text); border-color:rgba(255,255,255,.25)}
+  .save-info{font-size:11px; color:var(--muted)}
+
+  .fx{
+    position:fixed; left:50%; bottom:24px; transform:translate(-50%,16px); opacity:0; pointer-events:none;
+    background:#1a2430; border:1px solid rgba(240,192,96,.35); border-radius:12px; padding:10px 16px;
+    font-size:13px; box-shadow:0 16px 40px rgba(0,0,0,.5); transition:.22s; z-index:50; max-width:calc(100vw - 32px);
+  }
+  .fx.show{opacity:1; transform:translate(-50%,0)}
+
+  .start{
+    position:fixed; inset:0; z-index:80; display:grid; place-items:center; padding:22px;
+    background:
+      radial-gradient(700px 500px at 50% 0%, rgba(155,89,182,.18), transparent 65%),
+      rgba(6,9,13,.94); backdrop-filter:blur(8px);
+  }
+  .start-card{
+    width:100%; max-width:520px; text-align:center; padding:32px 26px;
+    background:linear-gradient(160deg,rgba(25,36,48,.98),rgba(11,16,22,.99));
+    border:1px solid var(--line); border-radius:20px; box-shadow:0 30px 90px rgba(0,0,0,.6);
+  }
+  .start-kicker{color:var(--gold); font-size:10px; letter-spacing:2.5px; text-transform:uppercase; margin-bottom:10px}
+  .start-card h1{font-size:clamp(30px,5vw,44px); line-height:1.05; margin-bottom:12px}
+  .start-card p{color:var(--muted); font-size:14px; line-height:1.7; margin-bottom:22px}
+  .start-actions{display:flex; flex-direction:column; gap:9px}
+  .start-btn{
+    font:inherit; font-size:15px; font-weight:800; color:#191207; border:0; border-radius:11px; padding:14px 18px;
+    background:linear-gradient(135deg,#ffd978,#f0c060 55%,#d99a2b); cursor:pointer;
+    box-shadow:0 10px 26px rgba(240,192,96,.24);
+  }
+  .start-btn.secondary{
+    color:var(--text); background:rgba(255,255,255,.03); border:1px solid var(--line); box-shadow:none;
+  }
+  .start-note{color:var(--muted); font-size:11px; margin-top:14px; line-height:1.5}
+
+  .ending .scene-title{color:var(--gold)}
+  .ending-badge{display:inline-block; color:var(--gold); border:1px solid rgba(240,192,96,.4); border-radius:99px; padding:4px 10px; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px}
+  .ending-stats{color:var(--muted); font-size:12px; margin-top:16px}
+
+  @media (max-width:820px){
+    .layout{grid-template-columns:1fr}
+    .portrait{display:flex; align-items:center; text-align:left; gap:14px; padding:12px}
+    .portrait-frame{width:96px; flex:0 0 96px; aspect-ratio:1}
+    .portrait-emoji{font-size:52px}
+    .speaker{margin-top:0}
+    .panel{min-height:0}
+  }
+  @media (max-width:520px){
+    body{padding:20px 14px 40px}
+    .panel{padding:16px}
+    .stats{grid-template-columns:1fr; gap:7px}
+    .stat{padding:8px 10px}
+    .scene-text{font-size:15px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important; animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">📖</div>
+      <div>
+        <h1>ПРОПАВШИЙ ВАЙБ</h1>
+        <small>BRICKYARD · ИНТЕРАКТИВНАЯ ИСТОРИЯ</small>
+      </div>
+    </div>
+    <div class="links">
+      <a class="btn" href="index.html">← В аркаду</a>
+      <a class="btn" href="https://discord.gg/nWAATWnnnJ" target="_blank" rel="noopener">В Discord</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="portrait">
+      <div class="portrait-frame" id="portraitFrame">
+        <div class="portrait-emoji" id="portraitEmoji">🌙</div>
+        <img id="portraitImg" alt="" hidden>
+      </div>
+      <div>
+        <div class="speaker" id="speaker">Система</div>
+        <div class="speaker-sub" id="speakerSub">Brickyard</div>
+      </div>
+    </aside>
+
+    <section class="panel" id="panel">
+      <div class="stats">
+        <div class="stat vibe">
+          <div class="stat-top"><span>💚 Вайб</span><b id="vibeNum">5/10</b></div>
+          <div class="bar"><i id="vibeBar"></i></div>
+        </div>
+        <div class="stat nerves">
+          <div class="stat-top"><span>⚡ Нервы</span><b id="nervesNum">5/10</b></div>
+          <div class="bar"><i id="nervesBar"></i></div>
+        </div>
+        <div class="stat poop">
+          <div class="stat-top"><span>💩 Какашки</span><b id="poopNum">0/10</b></div>
+          <div class="bar"><i id="poopBar"></i></div>
+        </div>
+      </div>
+
+      <div class="chapter" id="chapter">BRICKYARD · ИСТОРИЯ</div>
+      <h2 class="scene-title" id="sceneTitle">Тишина в эфире</h2>
+      <div class="scene-text" id="sceneText"></div>
+      <div class="choices" id="choices"></div>
+
+      <div class="game-footer">
+        <button class="small-btn" id="restartBtn" type="button">↺ Начать заново</button>
+        <span class="save-info" id="saveInfo">Сохранено</span>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="fx" id="fx"></div>
+
+<div class="start" id="start">
+  <div class="start-card">
+    <div class="start-kicker">Brickyard · интерактив</div>
+    <h1>Пропавший вайб</h1>
+    <p>Кирпич просит найти вайб сервера. На кухне — Пёс, в аркаде — Камина, в подвале — Пудж, в бункере — Демон. Твои выборы меняют вайб, нервы и какашки. Концовка зависит от того, кем ты окажешься.</p>
+    <div class="start-actions">
+      <button class="start-btn" id="startBtn" type="button">Начать историю</button>
+      <button class="start-btn secondary" id="continueBtn" type="button" hidden>Продолжить</button>
+    </div>
+    <div class="start-note">Прогресс сохраняется в этом браузере. Можно закрыть и вернуться.</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const SAVE_KEY = 'brickyard_quest_v1';
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const SCENES = {
+    start: {
+      title: 'Тишина в эфире',
+      speaker: 'Система',
+      speakerSub: 'Brickyard',
+      emoji: '🌙',
+      text: 'Ты заходишь в Brickyard. В голосовом — тишина. В #общий висит последнее сообщение: «вайб пропал». Бот молчит. Колесо не крутится. Даже Пёс не грызёт какашки.\n\nЧто-то здесь не так.',
+      choices: [
+        { text: 'Написать Кирпичу', hint: 'Узнать, что случилось', next: 'briefing', effects: { vibe: 1 } },
+        { text: 'Сразу проверить кухню', hint: 'Там всегда что-то происходит', next: 'kitchen', effects: { nerves: 1 } },
+        { text: 'Закрыть Discord и поспать', hint: 'Вайб подождёт', next: 'ending_sleep' }
+      ]
+    },
+    briefing: {
+      title: 'Сообщение от Кирпича',
+      speaker: 'Кирпич',
+      speakerSub: 'владелица сервера',
+      emoji: '🧱',
+      text: '«Вайб пропал. Последний раз его видели на кухне. Найдёшь — дам роль и, может, Лейс. Не найдёшь — сам будешь грызть какашки».\n\nК сообщению прикреплён след из чипсов. Это уже улика.',
+      choices: [
+        { text: 'Идти на кухню', hint: 'След из чипсов не врёт', next: 'kitchen', effects: { vibe: 1 } }
+      ]
+    },
+    kitchen: {
+      title: 'Кухня',
+      speaker: 'Пёс',
+      speakerSub: 'свидетель и хороший мальчик',
+      art: 'memes/dog.jpg',
+      text: 'На кухне пахнет чипсами и лёгкой безнадёгой. Пёс сидит над пустой пачкой Lays и смотрит так, будто ты забрал последнюю.\n\nНа полу — крошки, ведущие к аркаде. Пёс явно знает больше, чем говорит.',
+      choices: [
+        { text: 'Погладить Пёса', hint: 'Собаки любят ласку', next: 'dog_pet', effects: { vibe: 1 }, flag: 'dogFriend' },
+        { text: 'Забрать Lays', hint: 'Пригодятся в переговорах', next: 'lays_taken', effects: { poop: 1, vibe: -1 }, flag: 'lays' },
+        { text: 'Осмотреть крошки', hint: 'Детектив внутри тебя', next: 'crumbs' }
+      ]
+    },
+    dog_pet: {
+      title: 'Хороший мальчик',
+      speaker: 'Пёс',
+      speakerSub: 'теперь друг',
+      art: 'memes/dog.jpg',
+      text: 'Пёс виляет хвостом и тыкается носом в твою ладонь. На ошейнике записка: «Вайб ушёл в аркаду. Пудж видел».\n\nТы чувствуешь, что стал чуть ближе к собачьему народу.',
+      choices: [
+        { text: 'В аркаду', next: 'arcade', effects: { vibe: 1 } }
+      ]
+    },
+    lays_taken: {
+      title: 'Чипсы забраны',
+      speaker: 'Пёс',
+      speakerSub: 'разочарован',
+      art: 'memes/dog.jpg',
+      text: 'Ты забираешь Lays. Пёс смотрит в пустоту. Где-то вдалеке грустно звенит слот-машина.\n\nВ пачке осталась одна чипсина. Она смотрит на тебя с укором.',
+      choices: [
+        { text: 'Извиниться и вернуть Lays', hint: 'Вернуть доверие', next: 'dog_pet', effects: { vibe: 1 }, flag: 'dogFriend', unflag: 'lays' },
+        { text: 'Идти в аркаду', next: 'arcade' }
+      ]
+    },
+    crumbs: {
+      title: 'След из крошек',
+      speaker: 'Детектив',
+      speakerSub: 'ты',
+      emoji: '🔎',
+      text: 'Крошки ведут к аркаде. На полу — след от колеса и одна цитата: «Грызть какашки — вот твой ответ».\n\nПудж был здесь. Или очень старался, чтобы так казалось.',
+      choices: [
+        { text: 'В аркаду', next: 'arcade' }
+      ]
+    },
+    arcade: {
+      title: 'Аркада',
+      speaker: 'Камина',
+      speakerSub: 'верит в тебя',
+      art: 'memes/kamina_v3.png',
+      text: 'Камина стоит у автомата с Тетрисом. На экране — рекорд «ВАЙБ». Она смотрит на тебя: «Верь в себя! Но сначала собери линию».\n\nЗа её спиной мигает сломанный сапёр и крутится пустое колесо.',
+      choices: [
+        { text: 'Сыграть в Тетрис', hint: 'Проверить нервы', next: 'tetris', effects: { nerves: -1 } },
+        { text: 'Спросить про вайб', hint: 'Может, она видела', next: 'kamina_talk', effects: { vibe: 1 }, flag: 'kaminaTrust' },
+        { text: 'Слить игру специально', hint: 'Зачем?', next: 'kamina_angry', effects: { vibe: -1, poop: 1 } }
+      ]
+    },
+    tetris: {
+      title: 'Фигура падает',
+      speaker: 'Камина',
+      speakerSub: 'судья',
+      art: 'memes/kamina_v3.png',
+      text: 'Фигура падает. Секунда на решение. Куда ставить?',
+      choices: [
+        { text: 'Ровно, как взрослый', hint: 'Собрать линию', next: 'tetris_win', effects: { vibe: 1 }, flag: 'kaminaTrust' },
+        { text: 'Криво, как в жизни', hint: 'Зато честно', next: 'tetris_lose', effects: { nerves: -1 } }
+      ]
+    },
+    tetris_win: {
+      title: 'Линия собрана',
+      speaker: 'Камина',
+      speakerSub: 'впечатлена',
+      art: 'memes/kamina_v3.png',
+      text: 'Линия собрана. Камина хлопает: «Вот это вайб! Пудж унёс его в подвал, но ты не сдавайся».\n\nОна даёт тебе звёздные очки. Они ничего не делают, но с ними увереннее.',
+      choices: [
+        { text: 'В подвал', next: 'basement' }
+      ]
+    },
+    tetris_lose: {
+      title: 'Криво, но честно',
+      speaker: 'Камина',
+      speakerSub: 'вздыхает',
+      art: 'memes/kamina_v3.png',
+      text: 'Фигура падает криво. Камина вздыхает: «Верь в себя... но не так».\n\nНа экране всплывает подсказка: «Подвал». Это не игра, это судьба.',
+      choices: [
+        { text: 'В подвал', next: 'basement' }
+      ]
+    },
+    kamina_talk: {
+      title: 'Звёздные очки',
+      speaker: 'Камина',
+      speakerSub: 'делится мудростью',
+      art: 'memes/kamina_v3.png',
+      text: 'Камина: «Вайб забрал Пудж. Или Демон. Я не следила, у меня был рекорд».\n\nОна даёт тебе звёздные очки: «Верь в себя. Даже если вайб в подвале».',
+      choices: [
+        { text: 'В подвал', next: 'basement' }
+      ]
+    },
+    kamina_angry: {
+      title: 'Сломанный автомат',
+      speaker: 'Камина',
+      speakerSub: 'в ярости',
+      art: 'memes/kamina_v3.png',
+      text: 'Ты специально сливаешь игру. Камина ломает автомат. Аркада гаснет.\n\nВ темноте слышен голос: «Подвал...» И тихое «верь в себя» напоследок.',
+      choices: [
+        { text: 'В подвал', next: 'basement' }
+      ]
+    },
+    basement: {
+      title: 'Подвал',
+      speaker: 'Пудж',
+      speakerSub: 'мясник и коллекционер',
+      art: 'memes/pudge.png',
+      text: 'В подвале Пудж сидит на горе цитат. Рядом — банка с надписью «ВАЙБ». Он обнимает её, как мясо.\n\n«Мясо не делится, — говорит Пудж. — Но вайб... вайб можно обсудить».',
+      choices: [
+        { text: 'Драться', hint: 'Классика жанра', next: 'pudge_fight', effects: { nerves: -2, poop: 1 } },
+        { text: 'Предложить Lays', hint: 'У тебя есть чипсы', next: 'pudge_trade', if: s => !!s.flags.lays, flag: 'pudgeDeal', unflag: 'lays' },
+        { text: 'Поговорить по-человечески', hint: 'Пудж тоже хочет внимания', next: 'pudge_talk', effects: { vibe: 2 }, flag: 'pudgeDeal' }
+      ]
+    },
+    pudge_fight: {
+      title: 'Мясо не делится',
+      speaker: 'Пудж',
+      speakerSub: 'уважает смелых',
+      art: 'memes/pudge.png',
+      text: 'Ты бьёшь Пуджа. Он смеётся: «Мясо не делится». Но потом пожимает плечами и отдаёт банку.\n\n«Вайб у Демона в бункере. Но ты мне нравишься».',
+      choices: [
+        { text: 'В бункер', next: 'bunker' }
+      ]
+    },
+    pudge_trade: {
+      title: 'Сделка с Пуджем',
+      speaker: 'Пудж',
+      speakerSub: 'доволен',
+      art: 'memes/pudge.png',
+      text: 'Пудж берёт Lays, нюхает и отдаёт ключ от бункера. «Вайб у Демона. Но если что, я за Лейс».\n\nКажется, ты только что стал поставщиком чипсов в подвал.',
+      choices: [
+        { text: 'В бункер', next: 'bunker' }
+      ]
+    },
+    pudge_talk: {
+      title: 'Пудж тоже человек',
+      speaker: 'Пудж',
+      speakerSub: 'растроган',
+      art: 'memes/pudge.png',
+      text: 'Ты спрашиваешь, почему он забрал вайб. Пудж: «Меня не позвали на колесо».\n\nТы обещаешь позвать. Он отдаёт банку и ключ от бункера. «Демон ждёт. Но ты — нормальный».',
+      choices: [
+        { text: 'В бункер', next: 'bunker' }
+      ]
+    },
+    bunker: {
+      title: 'Бункер',
+      speaker: 'Демон',
+      speakerSub: 'предлагает сделку',
+      art: 'memes/demon.png',
+      text: 'В бункере Демон крутит колесо. На секторах — «роль», «мут», «ничего». Он улыбается: «Хочешь вайб? Отдай мне роль владельца».\n\nКолесо скрипит. Где-то далеко Пёс гавкает на какашку.',
+      choices: [
+        { text: 'Согласиться', hint: 'Власть или вайб?', next: 'demon_deal', effects: { nerves: 1, poop: 1, vibe: -1 }, flag: 'demonDeal' },
+        { text: 'Отказаться', hint: 'Вайб не продаётся', next: 'demon_refuse', effects: { nerves: -1, vibe: 1 } },
+        { text: 'Позвать друзей', hint: 'Пёс и Пудж рядом', next: 'demon_scare', if: s => !!(s.flags.dogFriend || s.flags.pudgeDeal), effects: { vibe: 2 } }
+      ]
+    },
+    demon_deal: {
+      title: 'Роль владельца',
+      speaker: 'Демон',
+      speakerSub: 'доволен',
+      art: 'memes/demon.png',
+      text: 'Демон хлопает. Банка пустая: внутри была записка «вайб там, где вы смеялись».\n\nОн исчезает, оставив тебе роль. Но в голосовом стало темнее, а колесо теперь всегда выдаёт «Ничего».',
+      choices: [
+        { text: 'Искать вайб', next: 'final' }
+      ]
+    },
+    demon_refuse: {
+      title: 'Отказ',
+      speaker: 'Демон',
+      speakerSub: 'уважает',
+      art: 'memes/demon.png',
+      text: 'Демон уважительно кивает: «Смело. Вайб там, где вы смеялись. Ищи в цитатнике».\n\nОн растворяется в тени бункера.',
+      choices: [
+        { text: 'Искать вайб', next: 'final' }
+      ]
+    },
+    demon_scare: {
+      title: 'Друзья пришли',
+      speaker: 'Демон',
+      speakerSub: 'отступает',
+      art: 'memes/demon.png',
+      text: 'Пёс лает, Пудж швыряет цитату, Камина кричит «Верь в себя!». Демон отступает: «Ладно, забирайте. Вайб в музее».\n\nДрузья — это сила. И немного шум.',
+      choices: [
+        { text: 'Искать вайб', next: 'final' }
+      ]
+    },
+    final: {
+      title: 'Где вайб?',
+      speaker: 'Ты',
+      speakerSub: 'почти финал',
+      emoji: '📖',
+      text: 'Вы обыскали музей, аркаду и бункер. Вайба нигде нет.\n\nПёс садится у цитатника и смотрит на тебя. На его ошейнике — маленькая записка: «вайб там, где вы смеялись».\n\nТы открываешь цитатник...',
+      choices: [
+        { text: 'Открыть цитатник', hint: 'Финальная страница', next: 'resolve' }
+      ]
+    },
+    ending_sleep: {
+      ending: true,
+      title: '😴 Не сегодня',
+      speaker: 'Концовка',
+      speakerSub: 'одна из шести',
+      emoji: '😴',
+      text: 'Ты закрываешь Discord. Вайб остаётся в архиве.\n\nИногда лучший квест — выспаться. Пёс охраняет сервер до твоего возвращения.'
+    },
+    ending_vibe: {
+      ending: true,
+      title: '🏆 Хранитель вайба',
+      speaker: 'Концовка',
+      speakerSub: 'лучшая',
+      art: 'memes/dog.jpg',
+      text: 'Вайб был в каждой сохранённой цитате. Ты открываешь цитатник — и сервер оживает.\n\nКирпич даёт тебе роль «Хранитель вайба», Пёс — лапу, Пудж — цитату. Колесо крутится, бот снова онлайн, а Камина говорит: «Верь в себя!»\n\nВайб: {vibe}/10. Нервы: {nerves}/10. Какашки: {poop}/10. Идеально.'
+    },
+    ending_demon: {
+      ending: true,
+      title: '👑 Владелец тьмы',
+      speaker: 'Концовка',
+      speakerSub: 'тёмная',
+      art: 'memes/demon.png',
+      text: 'Ты получаешь роль, но колесо теперь всегда выдаёт «Ничего 💩». Демон доволен. В голосовом темно, зато власть.\n\nВайб? Какой вайб.\n\nВайб: {vibe}/10. Нервы: {nerves}/10. Какашки: {poop}/10.'
+    },
+    ending_poop: {
+      ending: true,
+      title: '💩 Какашечный культ',
+      speaker: 'Концовка',
+      speakerSub: 'хаотичная',
+      art: 'memes/pudge.png',
+      text: 'Пудж становится пророком, Пёс — святым, а ты — главным по какашкам. Сервер жив, но лучше не спрашивать, как.\n\nВайб: {vibe}/10. Нервы: {nerves}/10. Какашки: {poop}/10. Культ одобряет.'
+    },
+    ending_burnout: {
+      ending: true,
+      title: '😵 Выгорание',
+      speaker: 'Концовка',
+      speakerSub: 'грустная',
+      emoji: '😵',
+      text: 'Ты закрываешь Discord. Пёс охраняет вайб до твоего возвращения.\n\nКогда ты вернёшься, он всё ещё будет ждать. Но сначала — отдохни.\n\nВайб: {vibe}/10. Нервы: {nerves}/10. Какашки: {poop}/10.'
+    },
+    ending_ok: {
+      ending: true,
+      title: '🙂 Вайб найден',
+      speaker: 'Концовка',
+      speakerSub: 'обычная',
+      emoji: '🙂',
+      text: 'Вайб возвращается. Не идеально, но в голосовом снова смеются. Кирпич довольна, Пёс грызёт какашки, колесо скрипит.\n\nВайб: {vibe}/10. Нервы: {nerves}/10. Какашки: {poop}/10. Нормально.'
+    }
+  };
+
+  const initialState = () => ({ stats: { vibe: 5, nerves: 5, poop: 0 }, flags: {}, sceneId: 'start' });
+  let state = initialState();
+  let typeTimer = null;
+  let currentScene = null;
+  let fullText = '';
+
+  const $ = id => document.getElementById(id);
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+  function saveGame() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      $('saveInfo').textContent = 'Сохранено';
+    } catch {}
+  }
+
+  function loadSave() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || !data.stats || !data.flags || !data.sceneId) return null;
+      if (!SCENES[data.sceneId]) return null;
+      return {
+        stats: {
+          vibe: clamp(Number(data.stats.vibe) || 0, 0, 10),
+          nerves: clamp(Number(data.stats.nerves) || 0, 0, 10),
+          poop: clamp(Number(data.stats.poop) || 0, 0, 10)
+        },
+        flags: data.flags || {},
+        sceneId: data.sceneId
+      };
+    } catch { return null; }
+  }
+
+  function renderStats() {
+    const s = state.stats;
+    $('vibeNum').textContent = s.vibe + '/10';
+    $('nervesNum').textContent = s.nerves + '/10';
+    $('poopNum').textContent = s.poop + '/10';
+    $('vibeBar').style.width = (s.vibe * 10) + '%';
+    $('nervesBar').style.width = (s.nerves * 10) + '%';
+    $('poopBar').style.width = (s.poop * 10) + '%';
+  }
+
+  function formatText(text) {
+    return text
+      .replace(/\{vibe\}/g, state.stats.vibe)
+      .replace(/\{nerves\}/g, state.stats.nerves)
+      .replace(/\{poop\}/g, state.stats.poop);
+  }
+
+  function showFx(changes) {
+    const parts = [];
+    if (changes.vibe) parts.push('💚 Вайб ' + (changes.vibe > 0 ? '+' : '−') + Math.abs(changes.vibe));
+    if (changes.nerves) parts.push('⚡ Нервы ' + (changes.nerves > 0 ? '+' : '−') + Math.abs(changes.nerves));
+    if (changes.poop) parts.push('💩 Какашки ' + (changes.poop > 0 ? '+' : '−') + Math.abs(changes.poop));
+    if (!parts.length) return;
+    const fx = $('fx');
+    fx.textContent = parts.join(' · ');
+    fx.classList.add('show');
+    clearTimeout(showFx.timer);
+    showFx.timer = setTimeout(() => fx.classList.remove('show'), 2200);
+  }
+
+  function applyEffects(effects) {
+    if (!effects) return {};
+    const actual = {};
+    for (const key of ['vibe', 'nerves', 'poop']) {
+      if (!effects[key]) continue;
+      const before = state.stats[key];
+      state.stats[key] = clamp(before + effects[key], 0, 10);
+      const delta = state.stats[key] - before;
+      if (delta) actual[key] = delta;
+    }
+    renderStats();
+    showFx(actual);
+    return actual;
+  }
+
+  function resolveEnding() {
+    if (state.flags.demonDeal) return 'ending_demon';
+    if (state.stats.poop >= 3) return 'ending_poop';
+    if (state.stats.nerves <= 2) return 'ending_burnout';
+    if (state.stats.vibe >= 8 && state.flags.dogFriend && state.flags.pudgeDeal) return 'ending_vibe';
+    return 'ending_ok';
+  }
+
+  function portrait(scene) {
+    const img = $('portraitImg');
+    const emoji = $('portraitEmoji');
+    if (scene.art) {
+      img.src = scene.art;
+      img.alt = scene.speaker || '';
+      img.hidden = false;
+      emoji.hidden = true;
+    } else {
+      img.hidden = true;
+      emoji.hidden = false;
+      emoji.textContent = scene.emoji || '❔';
+    }
+    $('speaker').textContent = scene.speaker || 'Brickyard';
+    $('speakerSub').textContent = scene.speakerSub || '';
+    $('sceneTitle').textContent = scene.title || 'Brickyard';
+  }
+
+  function renderChoices() {
+    const box = $('choices');
+    box.textContent = '';
+    if (!currentScene || currentScene.ending) return;
+
+    const choices = (currentScene.choices || []).filter(c => !c.if || c.if(state));
+    choices.forEach((choice, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'choice';
+      const num = document.createElement('b');
+      num.textContent = (i + 1) + '.';
+      btn.append(num, document.createTextNode(choice.text));
+      if (choice.hint) {
+        const hint = document.createElement('span');
+        hint.className = 'choice-hint';
+        hint.textContent = choice.hint;
+        btn.append(hint);
+      }
+      btn.addEventListener('click', () => choose(choice));
+      box.append(btn);
+    });
+  }
+
+  function finishTyping() {
+    if (!typeTimer) return;
+    clearInterval(typeTimer);
+    typeTimer = null;
+    $('sceneText').textContent = fullText;
+    renderChoices();
+  }
+
+  function typeText(text) {
+    const el = $('sceneText');
+    fullText = text;
+    el.textContent = '';
+    if (typeTimer) clearInterval(typeTimer);
+    typeTimer = null;
+
+    if (reduceMotion) {
+      el.textContent = text;
+      renderChoices();
+      return;
+    }
+
+    let i = 0;
+    typeTimer = setInterval(() => {
+      i += 2;
+      el.textContent = text.slice(0, i);
+      if (i >= text.length) finishTyping();
+    }, 16);
+  }
+
+  function renderScene(sceneId) {
+    let id = sceneId;
+    if (id === 'resolve') id = resolveEnding();
+    const scene = SCENES[id];
+    if (!scene) {
+      $('sceneTitle').textContent = 'Сцена потерялась';
+      $('sceneText').textContent = 'Такой сцены нет. Начни заново.';
+      return;
+    }
+
+    state.sceneId = id;
+    currentScene = scene;
+    portrait(scene);
+    $('panel').classList.toggle('ending', !!scene.ending);
+    $('chapter').textContent = scene.ending ? 'КОНЦОВКА · BRICKYARD' : 'BRICKYARD · ИСТОРИЯ';
+    if (scene.ending) {
+      $('sceneTitle').textContent = scene.title;
+      const badge = document.createElement('div');
+      badge.className = 'ending-badge';
+      badge.textContent = 'Концовка';
+      $('sceneTitle').after(badge);
+    } else {
+      const oldBadge = document.querySelector('.ending-badge');
+      if (oldBadge) oldBadge.remove();
+    }
+    renderStats();
+    saveGame();
+    typeText(formatText(scene.text));
+  }
+
+  function choose(choice) {
+    finishTyping();
+    if (choice.effects) applyEffects(choice.effects);
+    if (choice.flag) state.flags[choice.flag] = true;
+    if (choice.unflag) state.flags[choice.unflag] = false;
+    saveGame();
+    renderScene(choice.next);
+  }
+
+  function startGame(resume) {
+    if (!resume) {
+      state = initialState();
+      try { localStorage.removeItem(SAVE_KEY); } catch {}
+    }
+    $('start').hidden = true;
+    renderScene(state.sceneId);
+  }
+
+  function showStart() {
+    const saved = loadSave();
+    $('continueBtn').hidden = !saved;
+    $('start').hidden = false;
+  }
+
+  function resetGame() {
+    state = initialState();
+    try { localStorage.removeItem(SAVE_KEY); } catch {}
+    $('start').hidden = true;
+    renderScene('start');
+  }
+
+  // Buttons
+  $('startBtn').addEventListener('click', () => startGame(false));
+  $('continueBtn').addEventListener('click', () => {
+    const saved = loadSave();
+    if (!saved) return startGame(false);
+    state = saved;
+    $('start').hidden = true;
+    renderScene(state.sceneId);
+  });
+  $('restartBtn').addEventListener('click', () => {
+    if (confirm('Начать историю заново? Сохранение будет удалено.')) resetGame();
+  });
+  $('sceneText').addEventListener('click', finishTyping);
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'Enter') {
+      if (typeTimer) {
+        e.preventDefault();
+        finishTyping();
+      }
+    }
+  });
+
+  // Init
+  renderStats();
+  showStart();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>

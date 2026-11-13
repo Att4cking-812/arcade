@@ -6,10 +6,10 @@
 <title>Brickyard Arcade — мини-игры</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a0d12">
-<meta name="description" content="Мини-игры в браузере: змейка, сапёр, 2048, виселица, тетрис и морской бой. Плюс колесо фортуны, турниры и мем-музей.">
+<meta name="description" content="Мини-игры в браузере: змейка, сапёр, 2048, виселица, тетрис и морской бой. Плюс колесо фортуны, турниры, мем-музей и текстовый квест.">
 <meta property="og:site_name" content="Brickyard Arcade">
 <meta property="og:title" content="Brickyard Arcade">
-<meta property="og:description" content="Шесть игр, колесо фортуны, турниры и мем-музей — всё в браузере.">
+<meta property="og:description" content="Шесть игр, колесо фортуны, турниры, мем-музей и квест — всё в браузере.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://att4cking-812.github.io/arcade/">
 <meta property="og:image" content="https://att4cking-812.github.io/arcade/preview.png">
@@ -124,6 +124,7 @@
   .extra.wheel .eicon{box-shadow:0 0 24px rgba(240,192,96,.2)}
   .extra.museum .eicon{box-shadow:0 0 24px rgba(255,59,107,.16)}
   .extra.tourney .eicon{box-shadow:0 0 24px rgba(240,192,96,.22)}
+  .extra.quest .eicon{box-shadow:0 0 24px rgba(155,89,182,.22)}
   .extra h3{font-size:19px; margin-bottom:7px}
   .extra p{color:var(--muted); font-size:13px; line-height:1.6}
   .extra .play{margin-top:12px}
@@ -166,7 +167,7 @@
 
   <div class="hero">
     <h2>Скучно?<br><span>Вот шесть игр. И ещё кое-что.</span></h2>
-    <p>Змейка, сапёр, 2048, виселица, тетрис и морской бой — плюс колесо фортуны для ивентов, турниры и мем-музей сервера. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
+    <p>Змейка, сапёр, 2048, виселица, тетрис и морской бой — плюс колесо фортуны для ивентов, турниры, мем-музей и текстовый квест. Открыл — играешь. Без установки, регистрации и рекламы, рекорды остаются у тебя.</p>
   </div>
 
   <div class="grid">
@@ -245,6 +246,14 @@
           <h3>Турниры</h3>
           <p>Сетка на вылет, 4/8/16 игроков и чемпион. Бот сам ведёт матчи.</p>
           <div class="play">К турнирам</div>
+        </div>
+      </a>
+      <a class="extra quest reveal" href="quest.html">
+        <div class="eicon">📖</div>
+        <div>
+          <h3>Пропавший вайб</h3>
+          <p>Интерактивная история Brickyard: выборы, статы и шесть концовок.</p>
+          <div class="play">Начать историю</div>
         </div>
       </a>
     </div>
