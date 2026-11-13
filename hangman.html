@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Виселица — Brickyard Arcade</title>
+<meta name="theme-color" content="#0a0d12">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#121a23; --line:#1e2b38; --text:#e8f1f8;
+    --muted:#7c8b9a; --neon:#39ff88; --danger:#ff3b6b; --gold:#f0c060;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    background:radial-gradient(1000px 600px at 50% -10%, #16324a 0%, transparent 60%),
+               radial-gradient(800px 500px at 100% 100%, #3a1224 0%, transparent 55%), var(--bg);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .wrap{width:min(760px,100%)}
+  .top{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px}
+  .back{color:var(--muted); text-decoration:none; font-size:14px; border:1px solid var(--line); padding:8px 14px; border-radius:10px; transition:.2s}
+  .back:hover{color:var(--text); border-color:rgba(57,255,136,.4)}
+  h1{margin:0; font-size:32px; letter-spacing:1px}
+  h1 span{color:var(--danger); text-shadow:0 0 18px rgba(255,59,107,.45)}
+  .game{display:grid; grid-template-columns:250px 1fr; gap:22px; align-items:start}
+  .panel{background:linear-gradient(160deg,#0f1720,#0a1118); border:1px solid var(--line); border-radius:18px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.55)}
+  svg{display:block; width:100%; height:auto}
+  .word{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:10px 0 18px; min-height:56px}
+  .letter{
+    width:44px; height:54px; border-bottom:3px solid #2c3b4a; display:grid; place-items:center;
+    font-size:28px; font-weight:800; color:var(--text); text-transform:uppercase;
+  }
+  .letter.open{color:var(--neon); border-color:rgba(57,255,136,.5); text-shadow:0 0 14px rgba(57,255,136,.35)}
+  .letter.miss{color:var(--danger)}
+  .hint{color:var(--muted); font-size:14px; text-align:center; margin-bottom:14px}
+  .hint b{color:var(--gold); font-weight:600}
+  .kb{display:grid; gap:7px; justify-content:center}
+  .krow{display:flex; gap:7px; justify-content:center}
+  .key{
+    width:40px; height:42px; border-radius:8px; border:1px solid var(--line); background:#16212c;
+    color:var(--text); font-weight:700; font-size:15px; cursor:pointer; transition:.12s;
+  }
+  .key:hover:not(:disabled){background:#1e2c39; transform:translateY(-1px)}
+  .key:disabled{opacity:.35; cursor:default}
+  .key.ok{background:rgba(57,255,136,.16); border-color:rgba(57,255,136,.5); color:var(--neon)}
+  .key.bad{background:rgba(255,59,107,.14); border-color:rgba(255,59,107,.45); color:var(--danger)}
+  .stats{display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:7px 14px; font-size:13px; color:var(--muted)}
+  .stat b{color:var(--text)}
+  .btns{display:flex; gap:10px; justify-content:center; margin-top:14px}
+  button.ui{
+    padding:10px 18px; border-radius:10px; border:1px solid var(--line); cursor:pointer;
+    background:var(--panel); color:var(--text); font-size:14px; font-weight:600;
+  }
+  button.ui:hover{border-color:rgba(57,255,136,.4)}
+  button.primary{background:linear-gradient(180deg,#2dff8f,#12c96a); color:#052015; border:0; font-weight:800}
+  .overlay{position:fixed; inset:0; background:rgba(5,8,12,.72); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index:10}
+  .overlay.show{display:flex}
+  .modal{background:linear-gradient(160deg,#121b25,#0e151d); border:1px solid var(--line); border-radius:18px; padding:28px 34px; text-align:center; max-width:360px}
+  .modal h2{margin:0 0 8px; font-size:28px}
+  .modal p{margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.5}
+  @media (max-width:760px){
+    .game{grid-template-columns:1fr}
+    .panel svg{max-width:220px; margin:0 auto}
+    .key{width:30px; height:38px; font-size:13px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="index.html">← Аркада</a>
+    <h1>ВИСЕ<span>ЛИЦА</span></h1>
+    <div style="width:100px"></div>
+  </div>
+
+  <div class="game">
+    <div class="panel">
+      <svg viewBox="0 0 220 240" aria-hidden="true">
+        <line x1="20" y1="225" x2="150" y2="225" stroke="#2c3b4a" stroke-width="8" stroke-linecap="round"/>
+        <line x1="70" y1="225" x2="70" y2="25" stroke="#2c3b4a" stroke-width="8" stroke-linecap="round"/>
+        <line x1="70" y1="25" x2="150" y2="25" stroke="#2c3b4a" stroke-width="8" stroke-linecap="round"/>
+        <line x1="150" y1="25" x2="150" y2="50" stroke="#2c3b4a" stroke-width="6" stroke-linecap="round"/>
+        <g id="man" stroke="#ff5c7a" stroke-width="6" stroke-linecap="round" fill="none" opacity="0">
+          <circle id="p1" cx="150" cy="72" r="20" opacity="0"/>
+          <line id="p2" x1="150" y1="92" x2="150" y2="150" opacity="0"/>
+          <line id="p3" x1="150" y1="108" x2="122" y2="134" opacity="0"/>
+          <line id="p4" x1="150" y1="108" x2="178" y2="134" opacity="0"/>
+          <line id="p5" x1="150" y1="150" x2="126" y2="190" opacity="0"/>
+          <line id="p6" x1="150" y1="150" x2="174" y2="190" opacity="0"/>
+        </g>
+      </svg>
+    </div>
+
+    <div>
+      <div class="hint">Подсказка: <b id="hint">—</b></div>
+      <div class="word" id="word"></div>
+      <div class="kb" id="kb"></div>
+      <div class="stats">
+        <div class="stat">Ошибки: <b id="mistakes">0</b>/6</div>
+        <div class="stat">Побед: <b id="wins">0</b></div>
+      </div>
+      <div class="btns">
+        <button class="ui primary" id="restart">Новое слово</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="ovTitle">Победа!</h2>
+    <p id="ovText"></p>
+    <button class="ui primary" id="ovBtn">Ещё раз</button>
+  </div>
+</div>
+
+<script>
+const WORDS = [
+  { w: 'МАЙНКРАФТ', h: 'игра, где всё из кубиков' },
+  { w: 'ДИСКОРД', h: 'здесь мы общаемся' },
+  { w: 'КОМПЬЮТЕР', h: 'железо под столом' },
+  { w: 'ЗМЕЙКА', h: 'первая игра в аркаде' },
+  { w: 'САПЕР', h: 'игра с минами и флажками' },
+  { w: 'ПИНГВИН', h: 'птица в смокинге' },
+  { w: 'ШОКОЛАД', h: 'сладкое искушение' },
+  { w: 'МОЛНИЯ', h: 'электрический разряд с неба' },
+  { w: 'ГИТАРА', h: 'шесть струн' },
+  { w: 'РОБОТ', h: 'железный помощник' },
+  { w: 'ТЕЛЕФОН', h: 'всегда в кармане' },
+  { w: 'МУЗЫКА', h: 'то, что играет в наушниках' },
+  { w: 'ДРАКОН', h: 'дышит огнём' },
+  { w: 'КАКТУС', h: 'колючий житель пустыни' },
+  { w: 'ПЕЛЬМЕНИ', h: 'блюдо на ужин' },
+  { w: 'БУТЕРБРОД', h: 'быстрый перекус' },
+  { w: 'ВСЕЛЕННАЯ', h: 'всё, что вокруг' },
+  { w: 'КОСМОС', h: 'там звёзды и пустота' },
+  { w: 'ПИРАТ', h: 'ищет сокровища' },
+  { w: 'ВАМПИР', h: 'боится чеснока' }
+];
+
+const MAX_MISTAKES = 6;
+const ROWS = ['ЙЦУКЕНГШЩЗХЪ', 'ФЫВАПРОЛДЖЭ', 'ЯЧСМИТЬБЮ'];
+
+let word = '', hint = '', guessed = new Set(), mistakes = 0, over = false;
+let wins = +(localStorage.getItem('hangman_wins') || 0);
+
+const wordEl = document.getElementById('word');
+const kbEl = document.getElementById('kb');
+const hintEl = document.getElementById('hint');
+const mistakesEl = document.getElementById('mistakes');
+const winsEl = document.getElementById('wins');
+const overlay = document.getElementById('overlay');
+const ovTitle = document.getElementById('ovTitle');
+const ovText = document.getElementById('ovText');
+
+winsEl.textContent = wins;
+
+// звук
+let actx = null;
+function beep(freq, dur, type, vol) {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.14, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.12));
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + (dur || 0.12) + 0.02);
+  } catch (e) {}
+}
+const sfxOk = () => { beep(660, .08, 'triangle', .12); beep(990, .1, 'triangle', .1); };
+const sfxBad = () => beep(180, .16, 'sawtooth', .12);
+const sfxWin = () => { beep(660,.1,'triangle',.12); beep(880,.1,'triangle',.12); setTimeout(()=>beep(1320,.2,'triangle',.12),110); };
+const sfxLose = () => { beep(300,.15,'sawtooth',.12); setTimeout(()=>beep(200,.25,'sawtooth',.12),130); };
+
+function newWord() {
+  const item = WORDS[Math.floor(Math.random() * WORDS.length)];
+  word = item.w;
+  hint = item.h;
+  guessed = new Set();
+  mistakes = 0;
+  over = false;
+  hintEl.textContent = hint;
+  mistakesEl.textContent = '0';
+  overlay.classList.remove('show');
+  resetKeyboard();
+  renderWord();
+  renderMan();
+}
+
+function renderWord() {
+  wordEl.innerHTML = '';
+  for (const ch of word) {
+    const d = document.createElement('div');
+            d.className = 'letter' + (guessed.has(ch) ? ' open' : '');
+    d.textContent = guessed.has(ch) ? ch : '';
+    wordEl.appendChild(d);
+  }
+  // отметить ошибки в слове (буквы, которых нет)
+}
+
+function resetKeyboard() {
+  kbEl.innerHTML = '';
+  for (const row of ROWS) {
+    const r = document.createElement('div');
+    r.className = 'krow';
+    for (const ch of row) {
+      const b = document.createElement('button');
+      b.className = 'key';
+      b.textContent = ch;
+      b.dataset.ch = ch;
+      b.addEventListener('click', () => guess(ch));
+      r.appendChild(b);
+    }
+    kbEl.appendChild(r);
+  }
+}
+
+function renderMan() {
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById('p' + i);
+    el.setAttribute('opacity', i <= mistakes ? '1' : '0');
+  }
+}
+
+function keyButton(ch) {
+  return kbEl.querySelector(`button[data-ch="${ch}"]`);
+}
+
+function guess(ch) {
+  if (over || guessed.has(ch)) return;
+  guessed.add(ch);
+
+  const btn = keyButton(ch);
+  if (word.includes(ch)) {
+    btn.classList.add('ok');
+    sfxOk();
+    renderWord();
+    checkWin();
+  } else {
+    mistakes++;
+    mistakesEl.textContent = mistakes;
+    btn.classList.add('bad');
+    sfxBad();
+    renderMan();
+    if (mistakes >= MAX_MISTAKES) lose();
+  }
+  btn.disabled = true;
+}
+
+function checkWin() {
+  if ([...word].every(ch => guessed.has(ch))) {
+    over = true;
+    wins++;
+    localStorage.setItem('hangman_wins', wins);
+    winsEl.textContent = wins;
+    sfxWin();
+    ovTitle.textContent = 'Победа! 🎉';
+    ovText.textContent = `Слово «${word}» угадано. Ошибок: ${mistakes}.`;
+    overlay.classList.add('show');
+    submitScore('hangman', Math.max(10, 100 - mistakes * 12));
+  }
+}
+
+function lose() {
+  over = true;
+  sfxLose();
+  for (const ch of word) {
+    if (!guessed.has(ch)) {
+      const idx = [...word].indexOf(ch);
+      // показать все буквы
+    }
+  }
+  wordEl.innerHTML = '';
+  for (const ch of word) {
+    const d = document.createElement('div');
+    d.className = 'letter miss';
+    d.textContent = ch;
+    wordEl.appendChild(d);
+  }
+  ovTitle.textContent = 'Не угадал 😵';
+  ovText.textContent = `Было слово «${word}». Попробуешь ещё?`;
+  overlay.classList.add('show');
+}
+
+window.addEventListener('keydown', (e) => {
+  const ch = e.key.toUpperCase();
+  if (/^[А-ЯЁ]$/.test(ch)) {
+    guess(ch === 'Ё' ? 'Е' : ch);
+  }
+});
+
+document.getElementById('restart').addEventListener('click', newWord);
+document.getElementById('ovBtn').addEventListener('click', newWord);
+
+// ---------- лидерборд ----------
+async function submitScore(game, score) {
+  try {
+    let name = localStorage.getItem('player_name');
+    if (!name) {
+      name = (prompt('Как тебя записать в рекорды?', 'игрок') || 'игрок').slice(0, 16);
+      localStorage.setItem('player_name', name);
+    }
+    if (typeof lbSubmit === 'function') await lbSubmit(game, name, score);
+  } catch (e) {}
+}
+
+newWord();
+</script>
+<script src="leaderboard.js"></script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}</script>
+</body>
+</html>
