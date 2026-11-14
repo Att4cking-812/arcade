@@ -4,11 +4,34 @@
   "description": "Мини-игры в браузере: змейка, сапёр, 2048, виселица, тетрис и морской бой. Плюс колесо фортуны, турниры и мем-музей.",
   "start_url": "./",
   "scope": "./",
+  "id": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#0a0d12",
   "theme_color": "#0a0d12",
   "lang": "ru",
+  "categories": ["games", "entertainment"],
+  "shortcuts": [
+    {
+      "name": "Змейка",
+      "short_name": "Змейка",
+      "url": "./snake.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Мой профиль",
+      "short_name": "Профиль",
+      "url": "./profile.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Рекорды",
+      "short_name": "Рекорды",
+      "url": "./#top",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "icon-192.png",

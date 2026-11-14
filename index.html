@@ -6,6 +6,9 @@
 <title>Brickyard Arcade — мини-игры</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arcade">
 <meta name="description" content="Мини-игры в браузере: змейка, сапёр, 2048, виселица, тетрис и морской бой. Плюс колесо фортуны, турниры, мем-музей и текстовый квест.">
 <meta property="og:site_name" content="Brickyard Arcade">
 <meta property="og:title" content="Brickyard Arcade">
@@ -30,7 +33,7 @@
       radial-gradient(800px 500px at 90% 0%, rgba(57,255,136,.10), transparent 55%),
       radial-gradient(700px 600px at 50% 110%, rgba(240,192,96,.08), transparent 60%),
       var(--bg);
-    padding:34px 22px 60px;
+    padding:calc(34px + env(safe-area-inset-top)) calc(22px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(22px + env(safe-area-inset-left));
   }
   .wrap{max-width:1100px; margin:0 auto}
   .top{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:38px; flex-wrap:wrap}
@@ -160,6 +163,8 @@
       </div>
     </div>
     <div class="links">
+      <a class="btn" id="installBtn" hidden>⬇ Установить</a>
+      <a class="btn" href="profile.html">👤 Профиль</a>
       <a class="btn" href="https://att4cking-812.github.io/brickyard/" target="_blank" rel="noopener">🍷 Наш сервер</a>
       <a class="btn" href="https://discord.gg/nWAATWnnnJ" target="_blank" rel="noopener">Вступить</a>
     </div>
@@ -169,6 +174,8 @@
     <h2>Скучно?<br><span>Вот шесть игр. И ещё кое-что.</span></h2>
     <p>Змейка, сапёр, 2048, виселица, тетрис и морской бой — плюс колесо фортуны для ивентов, турниры, мем-музей и текстовый квест. Открыл — играешь. Без установки, регистрации и рекламы, рекорды сохраняются в онлайн-таблице.</p>
   </div>
+
+  <section class="arcade-profile" id="profileCard"></section>
 
   <div class="grid">
     <a class="game snake reveal" href="snake.html">
@@ -259,7 +266,7 @@
     </div>
   </section>
 
-  <section class="boards">
+  <section class="boards" id="top">
     <h2>Рекорды</h2>
     <div class="sub">Общие для всех — рекорды видны с любого устройства.</div>
     <div class="lbgrid">
@@ -285,10 +292,39 @@
     window.location.href = 'minesweeper.html?secret=1';
   });
 
+  let installPrompt = null;
+  const installBtn = document.getElementById('installBtn');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    if (installBtn) installBtn.hidden = false;
+  });
+  window.addEventListener('appinstalled', () => {
+    installPrompt = null;
+    if (installBtn) installBtn.hidden = true;
+  });
+  if (installBtn) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS && !window.navigator.standalone) installBtn.hidden = false;
+    installBtn.addEventListener('click', async () => {
+      if (!installPrompt) {
+        alert(isIOS
+          ? 'На iPhone: кнопка «Поделиться» → «На экран Домой».'
+          : 'Открой меню браузера и выбери «Установить приложение».');
+        return;
+      }
+      installPrompt.prompt();
+      try { await installPrompt.userChoice; } catch (e) {}
+      installPrompt = null;
+      installBtn.hidden = true;
+    });
+  }
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 </script>
 <script src="leaderboard.js?v=12"></script>
+<script src="profile.js?v=1"></script>
 </body>
 </html>
