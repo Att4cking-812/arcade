@@ -1,21 +1,114 @@
 /* Общий лидерборд аркады: локальный кэш + онлайн через Cloudflare Worker. */
 (function () {
   const KEY = 'arcade_scores_v1';
+  const MIGRATED_KEY = 'lb_migrated_v1';
   const ONLINE_URL = 'https://brickyard-leaderboard.brickyard-leaderboard.workers.dev';
   const LIMIT = 10;
   const onlineCache = {};
   const onlineRequests = {};
 
+  function normalizeList(list) {
+    const map = new Map();
+    (Array.isArray(list) ? list : []).forEach(function (row) {
+      if (!row || !row.n) return;
+      const name = String(row.n).trim().slice(0, 16);
+      if (!name) return;
+      const key = name.toLowerCase();
+      const score = Math.round(Number(row.s));
+      if (!Number.isFinite(score) || score <= 0) return;
+      const prev = map.get(key);
+      if (!prev) {
+        map.set(key, { n: name, s: score, d: row.d || '' });
+      } else if (score > prev.s) {
+        prev.s = score;
+        if (row.d) prev.d = row.d;
+      }
+    });
+    return Array.from(map.values())
+      .sort(function (a, b) { return b.s - a.s; })
+      .slice(0, LIMIT);
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
       const obj = raw ? JSON.parse(raw) : null;
-      return obj && typeof obj === 'object' ? obj : {};
+      const data = obj && typeof obj === 'object' ? obj : {};
+      let changed = false;
+      Object.keys(data).forEach(function (game) {
+        if (!Array.isArray(data[game])) return;
+        const clean = normalizeList(data[game]);
+        if (JSON.stringify(clean) !== JSON.stringify(data[game])) {
+          data[game] = clean;
+          changed = true;
+        }
+      });
+      if (changed) save(data);
+      return data;
     } catch (e) { return {}; }
   }
 
   function save(obj) {
     try { localStorage.setItem(KEY, JSON.stringify(obj)); } catch (e) {}
+  }
+
+  function getMigrated() {
+    try {
+      const raw = localStorage.getItem(MIGRATED_KEY);
+      const obj = raw ? JSON.parse(raw) : null;
+      return obj && typeof obj === 'object' ? obj : {};
+    } catch (e) { return {}; }
+  }
+
+  function markMigrated(game) {
+    try {
+      const flags = getMigrated();
+      flags[game] = 1;
+      localStorage.setItem(MIGRATED_KEY, JSON.stringify(flags));
+    } catch (e) {}
+  }
+
+  function postScore(game, name, score) {
+    return fetch(ONLINE_URL + '/scores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ game: game, name: name, score: score })
+    })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .catch(function () { return null; });
+  }
+
+  /* Один раз на устройство переносим локальные рекорды в онлайн:
+     сервер сам оставит лучший результат по каждому нику. */
+  function syncLocal(game, onlineRows) {
+    if (!ONLINE_URL || !game) return;
+    const flags = getMigrated();
+    if (flags[game]) return;
+
+    const localData = load();
+    const localRows = Array.isArray(localData[game]) ? localData[game] : [];
+    if (!localRows.length) { markMigrated(game); return; }
+
+    const pending = localRows.filter(function (row) {
+      const match = onlineRows.find(function (o) {
+        return String(o.n).toLowerCase() === String(row.n).toLowerCase();
+      });
+      return !match || row.s > match.s;
+    }).slice(0, 5);
+
+    if (!pending.length) { markMigrated(game); return; }
+
+    Promise.all(pending.map(function (row) {
+      return postScore(game, row.n, row.s);
+    })).then(function (results) {
+      const ok = results.filter(function (r) { return r && r.ok && Array.isArray(r.scores); });
+      if (!ok.length) return;
+      onlineCache[game] = ok[ok.length - 1].scores;
+      markMigrated(game);
+      try {
+        window.dispatchEvent(new CustomEvent('lb:update', { detail: { game: game, online: true } }));
+      } catch (e) {}
+    });
   }
 
   function ensureOnline(game) {
@@ -30,6 +123,7 @@
           try {
             window.dispatchEvent(new CustomEvent('lb:update', { detail: { game: game, online: true } }));
           } catch (e) {}
+          syncLocal(game, data.scores);
         }
         return data;
       })
@@ -57,21 +151,14 @@
 
     // Онлайн отправляем всегда: сервер сам оставит только лучший результат.
     if (ONLINE_URL) {
-      fetch(ONLINE_URL + '/scores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game: game, name: cleanName, score: rounded })
-      })
-        .then(function (res) { return res.ok ? res.json() : null; })
-        .then(function (data) {
-          if (data && data.ok && Array.isArray(data.scores)) {
-            onlineCache[game] = data.scores;
-            try {
-              window.dispatchEvent(new CustomEvent('lb:update', { detail: { game: game, online: true } }));
-            } catch (e) {}
-          }
-        })
-        .catch(function () {});
+      postScore(game, cleanName, rounded).then(function (data) {
+        if (data && data.ok && Array.isArray(data.scores)) {
+          onlineCache[game] = data.scores;
+          try {
+            window.dispatchEvent(new CustomEvent('lb:update', { detail: { game: game, online: true } }));
+          } catch (e) {}
+        }
+      });
     }
 
     const data = load();
@@ -106,7 +193,7 @@
       return online.slice(0, n || 5);
     }
     const data = load();
-    const list = Array.isArray(data[game]) ? data[game].slice() : [];
+    const list = Array.isArray(data[game]) ? normalizeList(data[game]) : [];
     return list.slice(0, n || 5);
   };
 
@@ -131,9 +218,12 @@
 
     const render = function () {
       const rows = window.lbTop(game, 5);
-      const online = Array.isArray(onlineCache[game]) && onlineCache[game].length > 0;
+      const onlineRows = onlineCache[game];
+      const online = Array.isArray(onlineRows) && onlineRows.length > 0;
+      const localOnly = Array.isArray(onlineRows) && onlineRows.length === 0 && rows.length > 0;
+      const suffix = online ? ' · онлайн' : (localOnly ? ' · локально' : '');
       el.innerHTML =
-        '<div class="lb-title">' + title + (online ? ' · онлайн' : '') + '</div>' +
+        '<div class="lb-title">' + title + suffix + '</div>' +
         (rows.length
           ? rows.map(function (r, i) {
               return '<div class="lb-row"><span class="lb-pos">' + (i + 1) + '</span>' +
