@@ -1875,6 +1875,7 @@
   updateHud(false);
   refreshPreviews();
   refreshTop();
+  if (typeof lbFetchOnline === 'function') lbFetchOnline('tetris');
   showOverlay('start');
   requestAnimationFrame(frame);
 

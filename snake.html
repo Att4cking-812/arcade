@@ -139,6 +139,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="leaderboard.js"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -155,34 +156,30 @@ const toast = document.getElementById('toast');
 
 let snake, dir, nextDir, food, score, best, speed, acc, last, running, over, paused;
 let particles = [];
-let top5 = [];
 try { best = +(localStorage.getItem('snake_best') || 0); } catch(e){ best = 0; }
 bestEl.textContent = best;
 
-function loadTop(){
-  try { top5 = JSON.parse(localStorage.getItem('snake_top5') || '[]') || []; }
-  catch(e){ top5 = []; }
-  renderTop();
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-function renderTop(){
-  if (!top5.length){
+function refreshTop(){
+  if (typeof lbTop !== 'function'){
     topEl.innerHTML = '<li class="empty">пока пусто</li>';
     return;
   }
-  topEl.innerHTML = top5.map((r, i) =>
-    `<li><span>${i + 1}.</span><b>${r.s}</b><span>${r.d || ''}</span></li>`
+  const rows = lbTop('snake', 5) || [];
+  if (!rows.length){
+    topEl.innerHTML = '<li class="empty">пока пусто</li>';
+    return;
+  }
+  topEl.innerHTML = rows.map((r, i) =>
+    `<li><span>${i + 1}.</span><b>${esc(r.n)}</b><span>${r.s}</span></li>`
   ).join('');
 }
-function saveTop(s){
-  if (s <= 0) return;
-  const d = new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-  top5.push({ s: s, d: d });
-  top5.sort((a, b) => b.s - a.s);
-  top5 = top5.slice(0, 5);
-  try { localStorage.setItem('snake_top5', JSON.stringify(top5)); } catch(e){}
-  renderTop();
-}
-loadTop();
+refreshTop();
+if (typeof lbFetchOnline === 'function') lbFetchOnline('snake');
+window.addEventListener('lb:update', refreshTop);
+window.addEventListener('storage', function(e){ if (e.key === 'arcade_scores_v1') refreshTop(); });
 
 function showToast(msg){
   toast.textContent = msg;
@@ -250,7 +247,6 @@ function gameOver(reason){
   over = true; running = false;
   sfxDie();
   if (score > best){ best = score; try { localStorage.setItem('snake_best', best); } catch(e){} bestEl.textContent = best; }
-  saveTop(score);
   if (score > 0 && typeof lbSubmit === 'function') {
     try { lbSubmit('snake', lbName(), score); } catch (e) {}
   }
@@ -426,7 +422,6 @@ window.addEventListener('keydown', e => {
 
 btn.addEventListener('click', () => { ensureAudio(); reset(); });
 </script>
-<script src="leaderboard.js"></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}</script>
 </body>
 </html>
