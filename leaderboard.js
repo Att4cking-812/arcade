@@ -20,11 +20,23 @@
     if (!game || !score || score <= 0) return Promise.resolve(false);
     const data = load();
     if (!Array.isArray(data[game])) data[game] = [];
-    data[game].push({
-      n: String(name || 'игрок').slice(0, 16),
-      s: Math.round(score),
-      d: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+    const cleanName = String(name || 'игрок').trim().slice(0, 16) || 'игрок';
+    const rounded = Math.round(score);
+    const existing = data[game].find(function (row) {
+      return String(row.n).toLowerCase() === cleanName.toLowerCase();
     });
+    if (existing) {
+      // Один ник — одна строка. Обновляем только если рекорд стал лучше.
+      if (rounded <= existing.s) return Promise.resolve(false);
+      existing.s = rounded;
+      existing.d = new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+    } else {
+      data[game].push({
+        n: cleanName,
+        s: rounded,
+        d: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+      });
+    }
     data[game].sort(function (a, b) { return b.s - a.s; });
     data[game] = data[game].slice(0, LIMIT);
     save(data);

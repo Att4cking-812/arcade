@@ -453,9 +453,9 @@
       <section class="card card-keys" aria-label="Управление с клавиатуры">
         <div class="card-label">Управление</div>
         <div class="key-list">
-          <div class="key-row"><kbd>←</kbd><kbd>→</kbd><span>движение</span></div>
-          <div class="key-row"><kbd>↓</kbd><span>мягкое падение</span></div>
-          <div class="key-row"><kbd>↑</kbd><kbd>X</kbd><span>поворот</span></div>
+          <div class="key-row"><kbd>←</kbd><kbd>→</kbd><kbd>A</kbd><kbd>D</kbd><span>движение</span></div>
+          <div class="key-row"><kbd>↓</kbd><kbd>S</kbd><span>мягкое падение</span></div>
+          <div class="key-row"><kbd>↑</kbd><kbd>W</kbd><kbd>X</kbd><span>поворот</span></div>
           <div class="key-row"><kbd>Z</kbd><kbd>Ctrl</kbd><span>против часовой</span></div>
           <div class="key-row"><kbd>Space</kbd><span>твёрдый сброс</span></div>
           <div class="key-row"><kbd>C</kbd><kbd>Shift</kbd><span>холд</span></div>
@@ -1755,7 +1755,8 @@
     var code = e.code;
 
     if (code === 'ArrowLeft' || code === 'ArrowRight' ||
-        code === 'ArrowDown' || code === 'ArrowUp' || code === 'Space') {
+        code === 'ArrowDown' || code === 'ArrowUp' || code === 'Space' ||
+        code === 'KeyA' || code === 'KeyD' || code === 'KeyS' || code === 'KeyW') {
       e.preventDefault();
     }
 
@@ -1766,7 +1767,7 @@
       return;
     }
     if (code === 'KeyR') {
-      if (!e.repeat) startNewGame();
+      if (!e.repeat && confirm('Начать заново?')) startNewGame();
       return;
     }
     if (code === 'Enter') {
@@ -1801,16 +1802,16 @@
 
     if (state !== 'playing' || clearing) return;
 
-    if (code === 'ArrowLeft') { move(-1); return; }
-    if (code === 'ArrowRight') { move(1); return; }
-    if (code === 'ArrowDown') {
+    if (code === 'ArrowLeft' || code === 'KeyA') { move(-1); return; }
+    if (code === 'ArrowRight' || code === 'KeyD') { move(1); return; }
+    if (code === 'ArrowDown' || code === 'KeyS') {
       if (!e.repeat) {
         softKey = true;
         if (canAct()) tryMoveDown(true);
       }
       return;
     }
-    if (code === 'ArrowUp' || code === 'KeyX') {
+    if (code === 'ArrowUp' || code === 'KeyW' || code === 'KeyX') {
       if (!e.repeat) rotate(1);
       return;
     }
@@ -1824,7 +1825,7 @@
   });
 
   window.addEventListener('keyup', function (e) {
-    if (e.code === 'ArrowDown') softKey = false;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') softKey = false;
   });
 
   window.addEventListener('blur', function () {
@@ -1869,6 +1870,7 @@
 
   buildBackground();
   setMuted(readMuted(), true);
+  bindTouchButtons();
   queue = makeBag();
   updateHud(false);
   refreshPreviews();

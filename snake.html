@@ -30,7 +30,7 @@
     color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
     display:flex; align-items:center; justify-content:center; padding:24px;
   }
-  .wrap{display:flex; gap:28px; align-items:flex-start}
+  .wrap{display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; justify-content:center; width:100%}
   .title{font-size:28px; font-weight:800; letter-spacing:2px; margin:0 0 4px}
   .title span{color:var(--neon); text-shadow:0 0 18px rgba(57,255,136,.6)}
   .sub{color:var(--muted); font-size:13px; margin-bottom:14px}
@@ -41,11 +41,11 @@
   }
   .back:hover{color:var(--text); border-color:rgba(57,255,136,.4); transform:translateY(-1px)}
   .board{
-    position:relative; border-radius:18px; padding:10px;
+    position:relative; border-radius:18px; padding:10px; max-width:100%;
     background:linear-gradient(145deg,#0f1720,#0a1118);
     box-shadow:0 0 0 1px #1d2a36, 0 20px 60px rgba(0,0,0,.6), 0 0 60px rgba(0,212,255,.08);
   }
-  canvas{display:block; border-radius:12px; background:#0a1017}
+  canvas{display:block; max-width:100%; height:auto; border-radius:12px; background:#0a1017; touch-action:none}
   .side{width:230px; display:flex; flex-direction:column; gap:14px}
   .card{
     background:linear-gradient(160deg,#121b25,#0e151d); border:1px solid #1e2b38;
@@ -86,6 +86,18 @@
     font-size:13px; color:#cfe0ee; opacity:0; transition:.3s; pointer-events:none;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:760px){
+    body{padding:14px; align-items:flex-start}
+    .wrap{flex-direction:column; align-items:center; gap:18px}
+    .board{width:100%; max-width:576px; padding:8px}
+    .overlay{inset:8px}
+    .side{width:100%; max-width:576px; display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .side .card:nth-child(3), .side .card.keys{grid-column:1/-1}
+    .title{font-size:24px}
+    .value{font-size:26px}
+    .card{padding:12px 14px}
+  }
 </style>
 </head>
 <body>
@@ -93,7 +105,7 @@
   <div>
     <a class="back" href="index.html">← Аркада</a>
     <h1 class="title">ЗМЕЙ<span>КА</span></h1>
-    <div class="sub">стрелки или WASD · Space — пауза · R — заново</div>
+    <div class="sub">стрелки/WASD или свайпы · Space — пауза · R — заново</div>
     <div class="board">
       <canvas id="c" width="576" height="576"></canvas>
       <div class="overlay show" id="ov">
@@ -249,6 +261,7 @@ function gameOver(reason){
 }
 
 function draw(){
+  if (!snake || !food) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   // сетка
@@ -407,7 +420,7 @@ window.addEventListener('keydown', e => {
     paused = !paused;
     if (paused){ showToast('Пауза'); sfxPause(); }
   }
-  else if (c === 'KeyR'){ reset(); }
+  else if (c === 'KeyR'){ if (!e.repeat && confirm('Начать заново?')) reset(); }
   else if (c === 'KeyM'){ toggleMute(); }
 });
 
