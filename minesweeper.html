@@ -100,6 +100,12 @@
   <div class="board" id="board"></div>
 
   <div class="btns">
+    <div class="seg" id="modes">
+      <button data-mode="endless" class="on">♾ Бесконечный</button>
+      <button data-mode="normal">🧱 Обычный</button>
+    </div>
+  </div>
+  <div class="btns" style="margin-top:10px">
     <div class="seg" id="levels">
       <button data-density="calm">🌿 Спокойно</button>
       <button data-density="classic" class="on">💣 Классика</button>
@@ -120,10 +126,13 @@
 </div>
 
 <script>
-/* ---------- бесконечный сапёр ----------
-   Мины считаются детерминированно из координат (x, y) и seed,
-   поэтому поле можно расширять до бесконечности без хранения сетки.
-   Первый клик всегда безопасен: вокруг него вырезается зона 3×3. */
+/* ---------- сапёр: два режима ----------
+   Бесконечный: мины считаются детерминированно из координат (x, y) и seed,
+   поле расширяется само, сетка не хранится целиком.
+   Обычный: фиксированное поле по кнопкам сложности, растёт только в бесконечном.
+   В обоих режимах первый клик всегда безопасен: вокруг него вырезается зона 3×3.
+   Один клик открывает максимум MAX_FLOOD клеток — иначе на низкой плотности
+   "спокойный" клик выкашивал пол-поля и игра ломалась. */
 const DENSITIES = {
   calm:    { value: 0.12, name: 'Спокойно' },
   classic: { value: 0.16, name: 'Классика' },
@@ -132,8 +141,14 @@ const DENSITIES = {
 const SECRET = { cols: 20, rows: 20, mines: 80 };
 const START = { cols: 8, rows: 8 };
 const MAX_SIDE = 96;
+const MAX_FLOOD = 45;
+const NORMAL = {
+  calm:    { cols: 9,  rows: 9,  mines: 10 },
+  classic: { cols: 12, rows: 12, mines: 24 },
+  hard:    { cols: 14, rows: 14, mines: 45 }
+};
 
-let mode = 'endless';          // endless | secret
+let mode = 'endless';          // endless | normal | secret
 let densityKey = 'classic';
 let density = DENSITIES.classic.value;
 let seed = 1;
@@ -141,6 +156,7 @@ let world = { minX: 0, minY: 0, maxX: START.cols - 1, maxY: START.rows - 1 };
 let cells = new Map();         // ключ "x,y" -> { x, y, mine, open, flag, n }
 let safeZone = new Set();
 let secretMines = null;
+let normalMines = null;
 
 let started = false;
 let dead = false;
@@ -158,6 +174,7 @@ const overlay = document.getElementById('overlay');
 const ovTitle = document.getElementById('ovTitle');
 const ovText = document.getElementById('ovText');
 const levelsEl = document.getElementById('levels');
+const modesEl = document.getElementById('modes');
 const hintEl = document.getElementById('hint');
 
 function key(x, y) { return x + ',' + y; }
@@ -213,6 +230,7 @@ function isMine(x, y) {
   const k = key(x, y);
   if (safeZone.has(k)) return false;
   if (mode === 'secret') return secretMines ? secretMines.has(k) : false;
+  if (mode === 'normal') return normalMines ? normalMines.has(k) : false;
   return rand2(x, y) < density;
 }
 
@@ -237,6 +255,7 @@ function getCell(x, y) {
 }
 
 function ensureRoom(x, y) {
+  if (mode !== 'endless') return;
   const pad = 2, grow = 4;
   if (x - world.minX < pad) world.minX = Math.max(-MAX_SIDE, world.minX - grow);
   if (world.maxX - x < pad) world.maxX = Math.min(MAX_SIDE, world.maxX + grow);
@@ -245,6 +264,24 @@ function ensureRoom(x, y) {
 }
 
 /* ---------- новая игра ---------- */
+function updateHint() {
+  if (mode === 'secret') {
+    hintEl.textContent = 'Секретный уровень: 20×20 и 80 мин. Найди их все — или взорвись, как все.';
+  } else if (mode === 'normal') {
+    const p = NORMAL[densityKey];
+    hintEl.textContent = 'Обычное поле ' + p.cols + '×' + p.rows + ' · ' + p.mines +
+      ' мин · не расширяется · ЛКМ — открыть · ПКМ — флажок';
+  } else {
+    hintEl.textContent = 'Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок';
+  }
+}
+
+function syncModeSeg() {
+  Array.prototype.forEach.call(modesEl.querySelectorAll('button'), function (b) {
+    b.classList.toggle('on', b.dataset.mode === mode);
+  });
+}
+
 function newGame() {
   stopTimer();
   timer = 0; timerEl.textContent = '0:00';
@@ -258,14 +295,21 @@ function newGame() {
   cells = new Map();
   safeZone = new Set();
   secretMines = null;
+  normalMines = null;
 
   if (mode === 'secret') {
     world = { minX: 0, minY: 0, maxX: SECRET.cols - 1, maxY: SECRET.rows - 1 };
     boardEl.classList.add('owner');
+  } else if (mode === 'normal') {
+    const p = NORMAL[densityKey];
+    world = { minX: 0, minY: 0, maxX: p.cols - 1, maxY: p.rows - 1 };
+    boardEl.classList.remove('owner');
   } else {
     world = { minX: 0, minY: 0, maxX: START.cols - 1, maxY: START.rows - 1 };
     boardEl.classList.remove('owner');
   }
+  syncModeSeg();
+  updateHint();
   render();
 }
 
@@ -290,11 +334,30 @@ function buildSecretMines(x, y) {
   }
 }
 
+/* Обычный режим: ровно N мин, как в классике, а не "примерно 12%". */
+function buildNormalMines(x, y) {
+  buildSafe(x, y);
+  const p = NORMAL[densityKey];
+  const pool = [];
+  for (let yy = 0; yy < p.rows; yy++) {
+    for (let xx = 0; xx < p.cols; xx++) {
+      if (safeZone.has(key(xx, yy))) continue;
+      pool.push({ x: xx, y: yy, r: rand2(xx, yy) });
+    }
+  }
+  pool.sort(function (a, b) { return a.r - b.r; });
+  normalMines = new Set();
+  for (let i = 0; i < Math.min(p.mines, pool.length); i++) {
+    normalMines.add(key(pool[i].x, pool[i].y));
+  }
+}
+
 /* ---------- отрисовка ---------- */
 function cellSize(cols) {
-  if (window.innerWidth <= 520) return 30;
-  const available = Math.min(window.innerWidth - 90, 720);
-  return Math.max(16, Math.min(34, Math.floor(available / cols)));
+  const gap = 4, padding = 24;
+  const available = Math.min(window.innerWidth - 28, 720);
+  const size = Math.floor((available - padding - (cols - 1) * gap) / cols);
+  return Math.max(14, Math.min(34, size));
 }
 
 function render() {
@@ -337,6 +400,7 @@ function openCell(x, y) {
   if (!started) {
     started = true;
     if (mode === 'secret') buildSecretMines(x, y);
+    else if (mode === 'normal') buildNormalMines(x, y);
     else buildSafe(x, y);
     // пересобираем кэш, чтобы безопасная зона и seed применились
     cells = new Map();
@@ -355,7 +419,8 @@ function openCell(x, y) {
       finish('Взрыв!', 'Секретный уровень не прощает ошибок. Открыто клеток: ' + opened + '.');
     } else {
       const score = Math.max(10, opened * 10);
-      finish('Взрыв!', 'Открыто клеток: ' + opened + ' · время ' + fmtTime(timer) + ' · очки: ' + score);
+      const label = mode === 'normal' ? 'Обычное поле' : 'Бесконечное поле';
+      finish('Взрыв!', label + ' · открыто клеток: ' + opened + ' · время ' + fmtTime(timer) + ' · очки: ' + score);
       saveRecord(score);
     }
     return;
@@ -374,7 +439,8 @@ function updateOpened() {
 function flood(sx, sy) {
   const stack = [[sx, sy]];
   let guard = 0;
-  while (stack.length && guard < 60000) {
+  let openedHere = 0;
+  while (stack.length && guard < 60000 && openedHere < MAX_FLOOD) {
     guard++;
     const p = stack.pop();
     const x = p[0], y = p[1];
@@ -385,6 +451,7 @@ function flood(sx, sy) {
     ensureRoom(x, y);
     c.open = true;
     opened++;
+    openedHere++;
     if (!c.n) c.n = countAround(x, y);
     if (c.n === 0) {
       for (let dy = -1; dy <= 1; dy++)
@@ -408,14 +475,36 @@ function toggleFlag(x, y) {
 }
 
 function checkWin() {
-  if (mode !== 'secret' || won) return;
-  if (opened === SECRET.cols * SECRET.rows - SECRET.mines) {
-    won = true;
-    stopTimer();
-    sfxWin();
-    revealAll();
-    finish('Победа!', 'Все 80 мин найдены за ' + fmtTime(timer) + '.');
-    saveRecord(Math.max(10, 2000 - timer * 5), true);
+  if (won) return;
+
+  if (mode === 'secret') {
+    if (opened === SECRET.cols * SECRET.rows - SECRET.mines) {
+      won = true;
+      stopTimer();
+      sfxWin();
+      revealAll();
+      finish('Победа!', 'Все 80 мин найдены за ' + fmtTime(timer) + '.');
+      saveRecord(Math.max(10, 2000 - timer * 5), true);
+    }
+    return;
+  }
+
+  if (mode === 'normal') {
+    const p = NORMAL[densityKey];
+    const total = p.cols * p.rows;
+    let mines = 0;
+    for (let y = 0; y < p.rows; y++)
+      for (let x = 0; x < p.cols; x++) if (isMine(x, y)) mines++;
+    if (opened >= total - mines) {
+      won = true;
+      stopTimer();
+      sfxWin();
+      revealAll();
+      const score = Math.max(10, opened * 10 + Math.max(0, 400 - timer * 3));
+      finish('Победа!', 'Поле ' + p.cols + '×' + p.rows + ' зачищено за ' + fmtTime(timer) +
+        ' · очки: ' + score);
+      saveRecord(score, true);
+    }
   }
 }
 
@@ -429,12 +518,13 @@ function revealAll() {
 }
 
 function saveRecord(score, isWin) {
+  const recordKey = mode === 'secret' ? 'mines_secret_best'
+    : (mode === 'normal' ? 'mines_normal_best' : 'mines_endless_best');
   try {
-    const k = mode === 'secret' ? 'mines_secret_best' : 'mines_endless_best';
-    const best = Number(localStorage.getItem(k) || 0);
-    if (!best || score > best) localStorage.setItem(k, String(score));
+    const best = Number(localStorage.getItem(recordKey) || 0);
+    if (!best || score > best) localStorage.setItem(recordKey, String(score));
   } catch (e) {}
-  if (!isWin && mode !== 'endless') return;
+  if (!isWin && mode === 'secret') return;
   if (typeof lbSubmit === 'function') {
     try { lbSubmit('mines', lbName(), score); } catch (e) {}
   }
@@ -483,13 +573,22 @@ levelsEl.addEventListener('click', function (e) {
     mode = 'endless';
     document.title = 'Сапёр — Brickyard Arcade';
     boardEl.classList.remove('owner');
-    hintEl.textContent = 'Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок';
   }
   densityKey = b.dataset.density;
   density = DENSITIES[densityKey].value;
   Array.prototype.forEach.call(levelsEl.querySelectorAll('button'), function (x) {
     x.classList.toggle('on', x === b);
   });
+  newGame();
+});
+
+modesEl.addEventListener('click', function (e) {
+  const b = e.target.closest('button[data-mode]');
+  if (!b) return;
+  if (b.dataset.mode === mode) return;
+  mode = b.dataset.mode;
+  document.title = 'Сапёр — Brickyard Arcade';
+  boardEl.classList.remove('owner');
   newGame();
 });
 
@@ -506,7 +605,6 @@ if (params.has('secret')) {
   mode = 'secret';
   document.title = 'Секретный уровень — Сапёр';
   Array.prototype.forEach.call(levelsEl.querySelectorAll('button'), function (x) { x.classList.remove('on'); });
-  hintEl.textContent = 'Секретный уровень: 20×20 и 80 мин. Найди их все — или взорвись, как все.';
   newGame();
   ovTitle.textContent = 'Секретный уровень 😈';
   ovText.textContent = 'Поле 20×20, 80 мин. Удачи, владелец.';
