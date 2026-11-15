@@ -18,7 +18,7 @@
                radial-gradient(800px 500px at 100% 100%, #2a1430 0%, transparent 55%), var(--bg);
     display:flex; align-items:center; justify-content:center; padding:24px;
   }
-  .wrap{width:min(720px,100%); text-align:center}
+  .wrap{width:min(760px,100%); text-align:center}
   .top{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px}
   .back{color:var(--muted); text-decoration:none; font-size:14px; border:1px solid var(--line); padding:8px 14px; border-radius:10px; transition:.2s}
   .back:hover{color:var(--text); border-color:rgba(57,255,136,.4)}
@@ -29,13 +29,13 @@
   .stat b{display:block; font-size:20px; color:var(--neon)}
   .stat small{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px}
   .board{
-    display:inline-grid; gap:4px; padding:12px; border-radius:16px;
+    display:inline-grid; gap:4px; padding:12px; border-radius:16px; max-width:100%;
     background:linear-gradient(160deg,#0f1720,#0a1118); border:1px solid var(--line);
     box-shadow:0 20px 60px rgba(0,0,0,.6);
     user-select:none; -webkit-user-select:none;
   }
   .cell{
-    width:34px; height:34px; border-radius:7px; border:0; cursor:pointer;
+    width:var(--cell,34px); height:var(--cell,34px); border-radius:7px; border:0; cursor:pointer;
     background:linear-gradient(145deg,#22303d,#18222c);
     color:#dfe9f2; font-weight:800; font-size:16px; display:grid; place-items:center;
     transition:background .12s, transform .08s; padding:0;
@@ -59,19 +59,19 @@
   }
   button.ui:hover{border-color:rgba(57,255,136,.4)}
   button.primary{background:linear-gradient(180deg,#2dff8f,#12c96a); color:#052015; border:0; font-weight:800}
-  .seg{display:inline-flex; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  .seg{display:inline-flex; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; flex-wrap:wrap}
   .seg button{background:none; border:0; color:var(--muted); padding:9px 14px; cursor:pointer; font-size:13px}
   .seg button.on{background:rgba(57,255,136,.12); color:var(--neon)}
   .hint{color:var(--muted); font-size:13px; margin-top:12px}
   .overlay{
     position:fixed; inset:0; background:rgba(5,8,12,.7); backdrop-filter:blur(4px);
-    display:none; align-items:center; justify-content:center; z-index:10;
+    display:none; align-items:center; justify-content:center; z-index:10; padding:20px;
   }
   .overlay.show{display:flex}
-  .modal{background:linear-gradient(160deg,#121b25,#0e151d); border:1px solid var(--line); border-radius:18px; padding:28px 34px; text-align:center; max-width:340px}
+  .modal{background:linear-gradient(160deg,#121b25,#0e151d); border:1px solid var(--line); border-radius:18px; padding:28px 34px; text-align:center; max-width:360px}
   .modal h2{margin:0 0 8px; font-size:28px}
-  .modal p{margin:0 0 18px; color:var(--muted); font-size:14px}
-  @media (max-width:520px){ .cell{width:29px;height:29px;font-size:14px} h1{font-size:26px} }
+  .modal p{margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.5}
+  @media (max-width:520px){ :root .cell{font-size:14px} h1{font-size:26px} }
 </style>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Brickyard Arcade">
@@ -92,7 +92,7 @@
   </div>
 
   <div class="bar">
-    <div class="stat"><b id="minesLeft">0</b><small>мин осталось</small></div>
+    <div class="stat"><b id="opened">0</b><small>открыто</small></div>
     <div class="stat"><b id="timer">0:00</b><small>время</small></div>
     <div class="stat"><b id="flagsCount">0</b><small>флагов</small></div>
   </div>
@@ -101,42 +101,66 @@
 
   <div class="btns">
     <div class="seg" id="levels">
-      <button data-level="easy" class="on">8×8 · 10</button>
-      <button data-level="medium">10×10 · 16</button>
-      <button data-level="hard">12×12 · 24</button>
+      <button data-density="calm">🌿 Спокойно</button>
+      <button data-density="classic" class="on">💣 Классика</button>
+      <button data-density="hard">🔥 Хардкор</button>
     </div>
     <button class="ui primary" id="restart">Заново</button>
   </div>
 
-  <div class="hint">ЛКМ — открыть · ПКМ — флажок · первый клик всегда безопасен</div>
+  <div class="hint" id="hint">Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок</div>
 </div>
 
 <div class="overlay" id="overlay">
   <div class="modal">
-    <h2 id="ovTitle">Победа!</h2>
-    <p id="ovText">Все мины найдены.</p>
+    <h2 id="ovTitle">Взрыв!</h2>
+    <p id="ovText">Ты наступил на мину.</p>
     <button class="ui primary" id="ovBtn">Ещё раз</button>
   </div>
 </div>
 
 <script>
-const LEVELS = {
-  easy:   { cols: 8,  rows: 8,  mines: 10 },
-  medium: { cols: 10, rows: 10, mines: 16 },
-  hard:   { cols: 12, rows: 12, mines: 24 },
-  owner:  { cols: 20, rows: 20, mines: 80 }
+/* ---------- бесконечный сапёр ----------
+   Мины считаются детерминированно из координат (x, y) и seed,
+   поэтому поле можно расширять до бесконечности без хранения сетки.
+   Первый клик всегда безопасен: вокруг него вырезается зона 3×3. */
+const DENSITIES = {
+  calm:    { value: 0.12, name: 'Спокойно' },
+  classic: { value: 0.16, name: 'Классика' },
+  hard:    { value: 0.22, name: 'Хардкор' }
 };
+const SECRET = { cols: 20, rows: 20, mines: 80 };
+const START = { cols: 8, rows: 8 };
+const MAX_SIDE = 96;
 
-let level = 'easy';
-let cfg = LEVELS[level];
-let grid = [];          // {mine, open, flag, n}
+let mode = 'endless';          // endless | secret
+let densityKey = 'classic';
+let density = DENSITIES.classic.value;
+let seed = 1;
+let world = { minX: 0, minY: 0, maxX: START.cols - 1, maxY: START.rows - 1 };
+let cells = new Map();         // ключ "x,y" -> { x, y, mine, open, flag, n }
+let safeZone = new Set();
+let secretMines = null;
+
 let started = false;
 let dead = false;
 let won = false;
 let flags = 0;
-let openedCount = 0;
+let opened = 0;
 let timer = 0;
 let timerId = null;
+
+const boardEl = document.getElementById('board');
+const openedEl = document.getElementById('opened');
+const timerEl = document.getElementById('timer');
+const flagsEl = document.getElementById('flagsCount');
+const overlay = document.getElementById('overlay');
+const ovTitle = document.getElementById('ovTitle');
+const ovText = document.getElementById('ovText');
+const levelsEl = document.getElementById('levels');
+const hintEl = document.getElementById('hint');
+
+function key(x, y) { return x + ',' + y; }
 
 function fmtTime(sec) {
   const m = Math.floor(sec / 60);
@@ -145,29 +169,18 @@ function fmtTime(sec) {
 }
 
 function stopTimer() {
-  if (timerId) {
-    clearInterval(timerId);
-    timerId = null;
-  }
+  if (timerId) { clearInterval(timerId); timerId = null; }
 }
 
 function startTimer() {
   if (timerId) return;
-  timerId = setInterval(() => {
+  timerId = setInterval(function () {
     timer++;
     timerEl.textContent = fmtTime(timer);
   }, 1000);
 }
 
-const boardEl = document.getElementById('board');
-const minesLeftEl = document.getElementById('minesLeft');
-const timerEl = document.getElementById('timer');
-const flagsEl = document.getElementById('flagsCount');
-const overlay = document.getElementById('overlay');
-const ovTitle = document.getElementById('ovTitle');
-const ovText = document.getElementById('ovText');
-
-// ---------- звук ----------
+/* ---------- звук ---------- */
 let actx = null;
 function snd(freq, dur, type, vol, when) {
   try {
@@ -183,49 +196,24 @@ function snd(freq, dur, type, vol, when) {
     o.start(t); o.stop(t + (dur || 0.08) + 0.02);
   } catch (e) {}
 }
-const sfxClick = () => snd(520, .05, 'sine', .05);
-const sfxFlag  = () => snd(880, .06, 'triangle', .06);
-const sfxBoom  = () => { snd(160, .18, 'sawtooth', .14); snd(90, .3, 'sawtooth', .12, .1); };
-const sfxWin   = () => { snd(660, .09, 'triangle', .1); snd(880, .09, 'triangle', .1, .09); snd(1320, .18, 'triangle', .1, .18); };
+const sfxClick = function () { snd(520, .05, 'sine', .05); };
+const sfxFlag  = function () { snd(880, .06, 'triangle', .06); };
+const sfxBoom  = function () { snd(160, .18, 'sawtooth', .14); snd(90, .3, 'sawtooth', .12, .1); };
+const sfxWin   = function () { snd(660, .09, 'triangle', .1); snd(880, .09, 'triangle', .1, .09); snd(1320, .18, 'triangle', .1, .18); };
 
-function newGame() {
-  stopTimer();
-  timer = 0; timerEl.textContent = '0:00';
-  started = false; dead = false; won = false;
-  flags = 0; openedCount = 0;
-  flagsEl.textContent = '0';
-  minesLeftEl.textContent = cfg.mines;
-  overlay.classList.remove('show');
-
-  grid = [];
-  for (let y = 0; y < cfg.rows; y++) {
-    const row = [];
-    for (let x = 0; x < cfg.cols; x++) row.push({ mine: false, open: false, flag: false, n: 0 });
-    grid.push(row);
-  }
-  render();
+/* ---------- генерация мира ---------- */
+function rand2(x, y) {
+  let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 1442695041);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
 }
 
-function plantMines(safeX, safeY) {
-  const safe = new Set();
-  for (let dy = -1; dy <= 1; dy++)
-    for (let dx = -1; dx <= 1; dx++) {
-      const nx = safeX + dx, ny = safeY + dy;
-      if (nx >= 0 && ny >= 0 && nx < cfg.cols && ny < cfg.rows) safe.add(nx + ',' + ny);
-    }
-
-  let placed = 0;
-  while (placed < cfg.mines) {
-    const x = Math.floor(Math.random() * cfg.cols);
-    const y = Math.floor(Math.random() * cfg.rows);
-    if (grid[y][x].mine || safe.has(x + ',' + y)) continue;
-    grid[y][x].mine = true;
-    placed++;
-  }
-
-  for (let y = 0; y < cfg.rows; y++)
-    for (let x = 0; x < cfg.cols; x++)
-      grid[y][x].n = countAround(x, y);
+function isMine(x, y) {
+  const k = key(x, y);
+  if (safeZone.has(k)) return false;
+  if (mode === 'secret') return secretMines ? secretMines.has(k) : false;
+  return rand2(x, y) < density;
 }
 
 function countAround(x, y) {
@@ -233,116 +221,223 @@ function countAround(x, y) {
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) {
       if (!dx && !dy) continue;
-      const nx = x + dx, ny = y + dy;
-      if (nx >= 0 && ny >= 0 && nx < cfg.cols && ny < cfg.rows && grid[ny][nx].mine) n++;
+      if (isMine(x + dx, y + dy)) n++;
     }
   return n;
 }
 
+function getCell(x, y) {
+  const k = key(x, y);
+  let c = cells.get(k);
+  if (!c) {
+    c = { x: x, y: y, mine: isMine(x, y), open: false, flag: false, n: 0 };
+    cells.set(k, c);
+  }
+  return c;
+}
+
+function ensureRoom(x, y) {
+  const pad = 2, grow = 4;
+  if (x - world.minX < pad) world.minX = Math.max(-MAX_SIDE, world.minX - grow);
+  if (world.maxX - x < pad) world.maxX = Math.min(MAX_SIDE, world.maxX + grow);
+  if (y - world.minY < pad) world.minY = Math.max(-MAX_SIDE, world.minY - grow);
+  if (world.maxY - y < pad) world.maxY = Math.min(MAX_SIDE, world.maxY + grow);
+}
+
+/* ---------- новая игра ---------- */
+function newGame() {
+  stopTimer();
+  timer = 0; timerEl.textContent = '0:00';
+  started = false; dead = false; won = false;
+  flags = 0; opened = 0;
+  openedEl.textContent = '0';
+  flagsEl.textContent = '0';
+  overlay.classList.remove('show');
+
+  seed = (Math.random() * 2147483647) | 0;
+  cells = new Map();
+  safeZone = new Set();
+  secretMines = null;
+
+  if (mode === 'secret') {
+    world = { minX: 0, minY: 0, maxX: SECRET.cols - 1, maxY: SECRET.rows - 1 };
+    boardEl.classList.add('owner');
+  } else {
+    world = { minX: 0, minY: 0, maxX: START.cols - 1, maxY: START.rows - 1 };
+    boardEl.classList.remove('owner');
+  }
+  render();
+}
+
+function buildSafe(x, y) {
+  safeZone = new Set();
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) safeZone.add(key(x + dx, y + dy));
+}
+
+function buildSecretMines(x, y) {
+  buildSafe(x, y);
+  const total = SECRET.cols * SECRET.rows;
+  secretMines = new Set();
+  let guard = 0;
+  while (secretMines.size < SECRET.mines && guard < total * 30) {
+    guard++;
+    const mx = Math.floor(Math.random() * SECRET.cols);
+    const my = Math.floor(Math.random() * SECRET.rows);
+    const k = key(mx, my);
+    if (safeZone.has(k) || secretMines.has(k)) continue;
+    secretMines.add(k);
+  }
+}
+
+/* ---------- отрисовка ---------- */
+function cellSize(cols) {
+  if (window.innerWidth <= 520) return 30;
+  const available = Math.min(window.innerWidth - 90, 720);
+  return Math.max(16, Math.min(34, Math.floor(available / cols)));
+}
+
 function render() {
-  boardEl.style.gridTemplateColumns = `repeat(${cfg.cols}, 1fr)`;
-  boardEl.innerHTML = '';
-  for (let y = 0; y < cfg.rows; y++) {
-    for (let x = 0; x < cfg.cols; x++) {
-      const c = grid[y][x];
+  const cols = world.maxX - world.minX + 1;
+  const rows = world.maxY - world.minY + 1;
+  boardEl.style.setProperty('--cell', cellSize(cols) + 'px');
+  boardEl.style.gridTemplateColumns = 'repeat(' + cols + ', var(--cell))';
+  const frag = document.createDocumentFragment();
+  for (let y = world.minY; y <= world.maxY; y++) {
+    for (let x = world.minX; x <= world.maxX; x++) {
+      const c = getCell(x, y);
       const b = document.createElement('button');
+      b.type = 'button';
       b.className = 'cell';
       b.dataset.x = x; b.dataset.y = y;
       if (c.open) {
         b.classList.add('open');
         if (c.mine) { b.classList.add('mine'); b.textContent = '💥'; }
-        else if (c.n > 0) { b.textContent = c.n; b.classList.add('n' + c.n); }
+        else if (!c.n) c.n = countAround(x, y);
+        if (!c.mine && c.n > 0) { b.textContent = c.n; b.classList.add('n' + c.n); }
       } else if (c.flag) {
         b.classList.add('flag'); b.textContent = '🚩';
       }
-      boardEl.appendChild(b);
+      frag.appendChild(b);
     }
   }
+  boardEl.innerHTML = '';
+  boardEl.appendChild(frag);
 }
 
+/* ---------- открытие ---------- */
 function openCell(x, y) {
-  const c = grid[y][x];
-  if (!c || c.open || c.flag || dead || won) return;
+  if (dead || won) return;
+  if (x < world.minX || x > world.maxX || y < world.minY || y > world.maxY) return;
+  const c = getCell(x, y);
+  if (c.open || c.flag) return;
 
   sfxClick();
 
   if (!started) {
     started = true;
-    plantMines(x, y);
+    if (mode === 'secret') buildSecretMines(x, y);
+    else buildSafe(x, y);
+    // пересобираем кэш, чтобы безопасная зона и seed применились
+    cells = new Map();
+    flags = 0; flagsEl.textContent = '0';
     startTimer();
   }
 
-  if (c.mine) {
-    c.open = true;
+  const cell = getCell(x, y);
+  if (cell.mine) {
+    cell.open = true;
     dead = true;
     stopTimer();
     sfxBoom();
     revealAll();
-    finish('Взрыв!', 'Ты наступил на мину.');
+    if (mode === 'secret') {
+      finish('Взрыв!', 'Секретный уровень не прощает ошибок. Открыто клеток: ' + opened + '.');
+    } else {
+      const score = Math.max(10, opened * 10);
+      finish('Взрыв!', 'Открыто клеток: ' + opened + ' · время ' + fmtTime(timer) + ' · очки: ' + score);
+      saveRecord(score);
+    }
     return;
   }
 
   flood(x, y);
   render();
+  updateOpened();
   checkWin();
 }
 
-function flood(x, y) {
-  const c = grid[y][x];
-  if (!c || c.open || c.flag || c.mine) return;
-  c.open = true;
-  openedCount++;
-  if (c.n === 0) {
-    for (let dy = -1; dy <= 1; dy++)
-      for (let dx = -1; dx <= 1; dx++) {
-        if (!dx && !dy) continue;
-        const nx = x + dx, ny = y + dy;
-        if (nx >= 0 && ny >= 0 && nx < cfg.cols && ny < cfg.rows) flood(nx, ny);
-      }
+function updateOpened() {
+  openedEl.textContent = opened;
+}
+
+function flood(sx, sy) {
+  const stack = [[sx, sy]];
+  let guard = 0;
+  while (stack.length && guard < 60000) {
+    guard++;
+    const p = stack.pop();
+    const x = p[0], y = p[1];
+    if (x < world.minX || x > world.maxX || y < world.minY || y > world.maxY) continue;
+    let c = getCell(x, y);
+    if (c.open || c.flag || c.mine) continue;
+
+    ensureRoom(x, y);
+    c.open = true;
+    opened++;
+    if (!c.n) c.n = countAround(x, y);
+    if (c.n === 0) {
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          stack.push([x + dx, y + dy]);
+        }
+    }
   }
 }
 
 function toggleFlag(x, y) {
-  const c = grid[y][x];
-  if (!c || c.open || dead || won) return;
+  if (x < world.minX || x > world.maxX || y < world.minY || y > world.maxY) return;
+  const c = getCell(x, y);
+  if (c.open || dead || won) return;
   c.flag = !c.flag;
   flags += c.flag ? 1 : -1;
   flagsEl.textContent = flags;
-  minesLeftEl.textContent = Math.max(0, cfg.mines - flags);
   sfxFlag();
   render();
 }
 
 function checkWin() {
-  const total = cfg.cols * cfg.rows;
-  if (openedCount === total - cfg.mines) {
+  if (mode !== 'secret' || won) return;
+  if (opened === SECRET.cols * SECRET.rows - SECRET.mines) {
     won = true;
     stopTimer();
     sfxWin();
-    gotWin();
     revealAll();
-    finish('Победа!', `Все мины найдены за ${fmtTime(timer)}.`);
-    if (typeof lbSubmit === 'function') {
-      try { lbSubmit('mines', lbName(), Math.max(10, 600 - timer * 3)); } catch (e) {}
-    }
+    finish('Победа!', 'Все 80 мин найдены за ' + fmtTime(timer) + '.');
+    saveRecord(Math.max(10, 2000 - timer * 5), true);
   }
 }
 
-function gotWin() {
-  try {
-    const key = 'mines_best_' + level;
-    const best = +(localStorage.getItem(key) || 0);
-    if (!best || timer < best) localStorage.setItem(key, timer);
-  } catch (e) {}
-}
-
 function revealAll() {
-  for (let y = 0; y < cfg.rows; y++)
-    for (let x = 0; x < cfg.cols; x++) {
-      const c = grid[y][x];
+  for (let y = world.minY; y <= world.maxY; y++)
+    for (let x = world.minX; x <= world.maxX; x++) {
+      const c = getCell(x, y);
       if (c.mine) c.open = true;
     }
   render();
+}
+
+function saveRecord(score, isWin) {
+  try {
+    const k = mode === 'secret' ? 'mines_secret_best' : 'mines_endless_best';
+    const best = Number(localStorage.getItem(k) || 0);
+    if (!best || score > best) localStorage.setItem(k, String(score));
+  } catch (e) {}
+  if (!isWin && mode !== 'endless') return;
+  if (typeof lbSubmit === 'function') {
+    try { lbSubmit('mines', lbName(), score); } catch (e) {}
+  }
 }
 
 function finish(title, text) {
@@ -351,66 +446,83 @@ function finish(title, text) {
   overlay.classList.add('show');
 }
 
-boardEl.addEventListener('click', (e) => {
+/* ---------- события ---------- */
+boardEl.addEventListener('click', function (e) {
   const b = e.target.closest('.cell');
   if (!b) return;
   openCell(+b.dataset.x, +b.dataset.y);
 });
 
-boardEl.addEventListener('contextmenu', (e) => {
+boardEl.addEventListener('contextmenu', function (e) {
   const b = e.target.closest('.cell');
   if (!b) return;
   e.preventDefault();
   toggleFlag(+b.dataset.x, +b.dataset.y);
 });
 
-// долгий тап — флажок
 let pressTimer = null;
-boardEl.addEventListener('touchstart', (e) => {
+boardEl.addEventListener('touchstart', function (e) {
   const b = e.target.closest('.cell');
   if (!b) return;
-  pressTimer = setTimeout(() => {
+  pressTimer = setTimeout(function () {
     toggleFlag(+b.dataset.x, +b.dataset.y);
     pressTimer = null;
   }, 420);
 }, { passive: true });
-boardEl.addEventListener('touchend', () => {
+boardEl.addEventListener('touchend', function () {
   if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 });
-boardEl.addEventListener('touchmove', () => {
+boardEl.addEventListener('touchmove', function () {
   if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 });
 
-document.getElementById('levels').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-level]');
+levelsEl.addEventListener('click', function (e) {
+  const b = e.target.closest('button[data-density]');
   if (!b) return;
-  level = b.dataset.level;
-  cfg = LEVELS[level];
-  boardEl.classList.remove('owner');
-  document.querySelectorAll('#levels button').forEach(x => x.classList.toggle('on', x === b));
+  if (mode === 'secret') {
+    mode = 'endless';
+    document.title = 'Сапёр — Brickyard Arcade';
+    boardEl.classList.remove('owner');
+    hintEl.textContent = 'Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок';
+  }
+  densityKey = b.dataset.density;
+  density = DENSITIES[densityKey].value;
+  Array.prototype.forEach.call(levelsEl.querySelectorAll('button'), function (x) {
+    x.classList.toggle('on', x === b);
+  });
   newGame();
 });
 
 document.getElementById('restart').addEventListener('click', newGame);
 document.getElementById('ovBtn').addEventListener('click', newGame);
 
+window.addEventListener('resize', function () {
+  if (!started && !dead) render();
+});
+
+/* ---------- старт / секретный уровень ---------- */
 const params = new URLSearchParams(location.search);
 if (params.has('secret')) {
-  level = 'owner';
-  cfg = LEVELS.owner;
+  mode = 'secret';
   document.title = 'Секретный уровень — Сапёр';
-  document.querySelectorAll('#levels button').forEach(x => x.classList.remove('on'));
+  Array.prototype.forEach.call(levelsEl.querySelectorAll('button'), function (x) { x.classList.remove('on'); });
+  hintEl.textContent = 'Секретный уровень: 20×20 и 80 мин. Найди их все — или взорвись, как все.';
   newGame();
-  boardEl.classList.add('owner');
   ovTitle.textContent = 'Секретный уровень 😈';
   ovText.textContent = 'Поле 20×20, 80 мин. Удачи, владелец.';
   overlay.classList.add('show');
+  // profile.js подключается ниже — ждём, пока он инициализируется
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.arcadeProfile && typeof window.arcadeProfile.markSecret === 'function') {
+      try { window.arcadeProfile.markSecret('mines80'); } catch (e) {}
+    }
+  });
 } else {
   newGame();
 }
 </script>
-<script src="leaderboard.js?v=12"></script>
-<script src="profile.js?v=1"></script>
+<script src="leaderboard.js?v=14"></script>
+<script src="profile.js?v=3"></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}</script>
 </body>
 </html>

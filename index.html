@@ -63,14 +63,19 @@
   .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px}
   .boards{margin-top:44px}
   .boards h2{font-size:26px; letter-spacing:-.4px; margin-bottom:6px}
+  .boards h2 .boards-all{color:inherit; text-decoration:none; transition:color .2s}
+  .boards h2 .boards-all:hover{color:var(--neon)}
   .boards .sub{color:var(--muted); font-size:14px; margin-bottom:16px}
+  .boards .sub a{color:var(--neon); text-decoration:none; border-bottom:1px dotted rgba(57,255,136,.4)}
+  .boards .sub a:hover{border-bottom-style:solid}
   .lbgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
   .lb{background:linear-gradient(160deg,rgba(25,36,48,.9),rgba(11,16,22,.95)); border:1px solid var(--line); border-radius:16px; padding:16px 18px}
   .lb-title{font-size:14px; font-weight:700; color:var(--text); margin-bottom:10px}
   .lb-row{display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px dashed rgba(255,255,255,.05); font-size:13px}
   .lb-row:last-child{border-bottom:0}
   .lb-pos{width:18px; color:var(--muted); font-size:12px}
-  .lb-name{flex:1; color:#cdd9e5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .lb-name{flex:1; color:#cdd9e5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-decoration:none; transition:.15s}
+  .lb-name:hover{color:var(--neon); text-decoration:underline; text-underline-offset:2px}
   .lb-score{color:var(--neon)}
   .lb-empty{color:var(--muted); font-size:13px; font-style:italic}
   .lbn{color:var(--muted); font-size:12px; margin-top:12px}
@@ -267,8 +272,8 @@
   </section>
 
   <section class="boards" id="top">
-    <h2>Рекорды</h2>
-    <div class="sub">Общие для всех — рекорды видны с любого устройства.</div>
+    <h2><a class="boards-all" href="leaderboard.html">Рекорды →</a></h2>
+    <div class="sub">Общие для всех — рекорды видны с любого устройства. <a class="boards-sub-link" href="leaderboard.html">Полный лидерборд</a></div>
     <div class="lbgrid">
       <div class="lb" data-lb="snake" data-lb-title="🐍 Змейка"></div>
       <div class="lb" data-lb="mines" data-lb-title="💣 Сапёр"></div>
@@ -277,7 +282,7 @@
       <div class="lb" data-lb="tetris" data-lb-title="🧱 Тетрис"></div>
       <div class="lb" data-lb="seabattle" data-lb-title="🚢 Морской бой"></div>
     </div>
-    <p class="lbn">Онлайн-таблицы через Cloudflare Worker: старые локальные рекорды переносятся автоматически, новые отправляются сразу после игры.</p>
+    <p class="lbn">Онлайн-таблицы через <a class="worker-link" href="wheel-studio-9f2c.html" title="Только для ведущих">Cloudflare Worker</a>: старые локальные рекорды переносятся автоматически, новые отправляются сразу после игры.</p>
   </section>
 
   <footer>
@@ -324,7 +329,7 @@
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 </script>
-<script src="leaderboard.js?v=12"></script>
-<script src="profile.js?v=1"></script>
+<script src="leaderboard.js?v=14"></script>
+<script src="profile.js?v=3"></script>
 </body>
 </html>

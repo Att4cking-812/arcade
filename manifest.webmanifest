@@ -28,7 +28,7 @@
     {
       "name": "Рекорды",
       "short_name": "Рекорды",
-      "url": "./#top",
+      "url": "./leaderboard.html",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ],

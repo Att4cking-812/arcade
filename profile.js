@@ -41,7 +41,8 @@
     { id: 'sea800', icon: '🚢', title: 'Морской бой: 800', desc: 'Победи ИИ, потратив мало выстрелов.', test: function (s) { return bestOf(s, 'seabattle') >= 800; } },
     { id: 'allbest', icon: '🏅', title: 'Полный комплект', desc: 'Оставь рекорд во всех шести играх.', test: function (s) { return GAME_KEYS.every(function (g) { return bestOf(s, g) > 0; }); } },
     { id: 'online', icon: '🌐', title: 'В сети', desc: 'Твой рекорд попал в онлайн-таблицу.', test: function () { return false; } },
-    { id: 'top1', icon: '👑', title: 'Лучший на сервере', desc: 'Займи первое место в любой онлайн-таблице.', test: function () { return false; } }
+    { id: 'top1', icon: '👑', title: 'Лучший на сервере', desc: 'Займи первое место в любой онлайн-таблице.', test: function () { return false; } },
+    { id: 'detective', icon: '🕵️', title: 'Детектив', desc: 'Найди секретный уровень сапёра с 80 минами.', test: function (s) { return !!(s.secrets && s.secrets.mines80); } }
   ];
 
   function load() {
@@ -53,6 +54,7 @@
       state.best = state.best && typeof state.best === 'object' ? state.best : {};
       state.days = state.days && typeof state.days === 'object' ? state.days : {};
       state.unlocked = state.unlocked && typeof state.unlocked === 'object' ? state.unlocked : {};
+      state.secrets = state.secrets && typeof state.secrets === 'object' ? state.secrets : {};
       // Подхватываем старые локальные рекорды, чтобы достижения не терялись.
       [['snake', 'snake_best'], ['g2048', 'g2048_best'], ['seabattle', 'seabattle_best']].forEach(function (pair) {
         if (Number(state.best[pair[0]]) > 0) return;
@@ -63,7 +65,7 @@
       });
       return state;
     } catch (e) {
-      return { plays: {}, best: {}, days: {}, unlocked: {} };
+      return { plays: {}, best: {}, days: {}, unlocked: {}, secrets: {} };
     }
   }
 
@@ -140,8 +142,7 @@
     checkAchievements();
   }
 
-  function recordScore(game, name, score) {
-    const state = load();
+  function recordScore(game, name, score) {    const state = load();
     const value = Math.round(Number(score));
     if (Number.isFinite(value) && value > bestOf(state, game)) {
       state.best[game] = value;
@@ -151,6 +152,17 @@
       try { localStorage.setItem('player_name', String(name).trim().slice(0, 16)); } catch (e) {}
     }
     checkAchievements();
+  }
+
+  /* Секретные находки: отмечаем факт обнаружения скрытого контента. */
+  function markSecret(id) {
+    if (!id) return false;
+    const state = load();
+    if (state.secrets[id]) return false;
+    state.secrets[id] = Date.now();
+    save(state);
+    checkAchievements(true);
+    return true;
   }
 
   const toastQueue = [];
@@ -282,12 +294,193 @@
         (latest.length
           ? latest.map(function (b) { return '<span class="arcade-mini-badge" title="' + escapeHtml(b.desc) + '">' + b.icon + ' ' + escapeHtml(b.title) + '</span>'; }).join('')
           : '<span class="arcade-mini-empty">Пока пусто — сыграй первую игру и получи значок.</span>') +
-      '</div>';
+      '</div>' +
+      (window.lbAuth
+        ? (window.lbAuth.token()
+          ? '<div class="arcade-auth-hint">✅ Discord подключён — рекорды синхронизируются между устройствами.</div>'
+          : '<div class="arcade-auth-hint"><a href="' + escapeHtml(window.lbAuth.loginUrl(location.href.split('#')[0])) + '">Войти через Discord</a> — один профиль на всех устройствах.</div>')
+        : '');
+  }
+
+  /* Публичный профиль по нику: собираем данные из онлайн-таблиц. */
+  function renderPublicProfile(root, viewName) {
+    const initial = (viewName.charAt(0) || '?').toUpperCase();
+    try { document.title = viewName + ' — профиль Brickyard Arcade'; } catch (e) {}
+
+    root.innerHTML =
+      '<div class="profile-hero">' +
+        '<div class="profile-avatar">' + escapeHtml(initial) + '</div>' +
+        '<div class="profile-id">' +
+          '<div class="profile-name-row"><h1>' + escapeHtml(viewName) + '</h1></div>' +
+          '<div class="profile-sub">Публичный профиль · данные из онлайн-таблиц</div>' +
+        '</div>' +
+        '<div class="profile-score"><b id="publicPlaces">—</b><span>игр в топ-10</span></div>' +
+      '</div>' +
+      '<div class="profile-section"><h2>Онлайн-рекорды</h2>' +
+        '<div class="profile-bests" id="publicRows"><div class="profile-best"><span class="profile-best-name">Загрузка…</span></div></div>' +
+      '</div>' +
+      '<div class="profile-section" style="margin-top:20px"><a class="btn" href="leaderboard.html">Полный лидерборд →</a></div>';
+
+    const rowsEl = document.getElementById('publicRows');
+    const placesEl = document.getElementById('publicPlaces');
+    const needle = viewName.toLowerCase();
+
+    if (typeof window.lbFetchOnline !== 'function') {
+      if (rowsEl) rowsEl.innerHTML = '<div class="profile-best"><span class="profile-best-name">Онлайн-таблицы недоступны.</span></div>';
+      return;
+    }
+
+    Promise.all(GAME_KEYS.map(function (g) {
+      return window.lbFetchOnline(g).then(function (data) {
+        return { game: g, rows: data && data.ok && Array.isArray(data.scores) ? data.scores : [] };
+      }).catch(function () { return { game: g, rows: [] }; });
+    })).then(function (results) {
+      const found = [];
+      results.forEach(function (r) {
+        const idx = r.rows.findIndex(function (row) { return String(row.n || '').toLowerCase() === needle; });
+        if (idx >= 0) found.push({ game: r.game, row: r.rows[idx], rank: idx + 1 });
+      });
+
+      if (placesEl) placesEl.textContent = found.length ? String(found.length) : '0';
+      if (!rowsEl) return;
+
+      if (!found.length) {
+        rowsEl.innerHTML = '<div class="profile-best"><span class="profile-best-name">У этого ника пока нет рекордов в топ-10. Загляни в полный лидерборд — вдруг он там.</span></div>';
+        return;
+      }
+
+      found.sort(function (a, b) { return b.row.s - a.row.s; });
+      rowsEl.innerHTML = found.map(function (f) {
+        const info = GAMES[f.game];
+        return '<div class="profile-best">' +
+          '<span class="profile-best-icon">' + info.icon + '</span>' +
+          '<span class="profile-best-name">' + escapeHtml(info.name) +
+            ' <span style="color:#7c8b9a;font-size:12px">#' + f.rank + (f.row.d ? ' · ' + escapeHtml(String(f.row.d)) : '') + '</span></span>' +
+          '<b>' + f.row.s + '</b></div>';
+      }).join('');
+    });
+  }
+
+  /* Публичный профиль по Discord ID: данные из воркера. */
+  function renderPublicUid(root, uid) {
+    try { document.title = 'Профиль игрока — Brickyard Arcade'; } catch (e) {}
+
+    root.innerHTML =
+      '<div class="profile-hero">' +
+        '<div class="profile-avatar" id="publicAvatar">?</div>' +
+        '<div class="profile-id">' +
+          '<div class="profile-name-row"><h1 id="publicName">Загрузка…</h1></div>' +
+          '<div class="profile-sub">Профиль Discord · общие рекорды</div>' +
+        '</div>' +
+        '<div class="profile-score"><b id="publicCount">—</b><span>игр с рекордом</span></div>' +
+      '</div>' +
+      '<div class="profile-section"><h2>Рекорды в аркаде</h2>' +
+        '<div class="profile-bests" id="publicRows"><div class="profile-best"><span class="profile-best-name">Загрузка…</span></div></div>' +
+      '</div>' +
+      '<div class="profile-section" style="margin-top:20px"><a class="btn" href="leaderboard.html">Полный лидерборд →</a></div>';
+
+    const rowsEl = document.getElementById('publicRows');
+    const nameEl = document.getElementById('publicName');
+    const avatarEl = document.getElementById('publicAvatar');
+    const countEl = document.getElementById('publicCount');
+
+    if (typeof window.lbFetchProfile !== 'function') {
+      if (rowsEl) rowsEl.innerHTML = '<div class="profile-best"><span class="profile-best-name">Профили недоступны.</span></div>';
+      return;
+    }
+
+    window.lbFetchProfile(uid).then(function (data) {
+      if (!data || !data.ok) {
+        if (nameEl) nameEl.textContent = 'Профиль не найден';
+        if (rowsEl) rowsEl.innerHTML = '<div class="profile-best"><span class="profile-best-name">Пока нет данных. Возможно, игрок ещё не отправил ни одного рекорда после входа.</span></div>';
+        return;
+      }
+      const user = data.user || {};
+      const name = user.name || 'Игрок Discord';
+      if (nameEl) nameEl.textContent = name;
+      if (avatarEl) {
+        if (user.avatar) {
+          avatarEl.innerHTML = '<img src="' + escapeHtml(user.avatar) + '" alt="' + escapeHtml(name) + '">';
+        } else {
+          avatarEl.textContent = (name.charAt(0) || '?').toUpperCase();
+        }
+      }
+      const games = Array.isArray(data.games) ? data.games : [];
+      if (countEl) countEl.textContent = String(games.length);
+      if (!rowsEl) return;
+      if (!games.length) {
+        rowsEl.innerHTML = '<div class="profile-best"><span class="profile-best-name">Рекордов пока нет — но всё впереди.</span></div>';
+        return;
+      }
+      rowsEl.innerHTML = games.map(function (row) {
+        const info = GAMES[row.game] || { name: row.game, icon: '🎮' };
+        return '<div class="profile-best">' +
+          '<span class="profile-best-icon">' + info.icon + '</span>' +
+          '<span class="profile-best-name">' + escapeHtml(info.name) +
+            (row.d ? ' <span style="color:#7c8b9a;font-size:12px">' + escapeHtml(String(row.d)) + '</span>' : '') +
+          '</span><b>' + row.score + '</b></div>';
+      }).join('');
+    });
+  }
+
+  function renderAuthBar() {
+    const bar = document.getElementById('authBar');
+    if (!bar) return;
+    const auth = window.lbAuth;
+    if (!auth) return;
+
+    if (!auth.token()) {
+      bar.innerHTML =
+        '<div class="auth-copy"><b>Играешь с нескольких устройств?</b>' +
+        '<span>Войди через Discord — один профиль и рекорды без дублей.</span></div>' +
+        '<a class="auth-btn" href="' + escapeHtml(auth.loginUrl(location.href.split('#')[0])) + '">Войти через Discord</a>';
+      return;
+    }
+
+    bar.innerHTML = '<div class="auth-copy"><b>Проверяю вход…</b></div>';
+    auth.me().then(function (user) {
+      if (!bar || !document.body.contains(bar)) return;
+      if (!user) {
+        auth.clear();
+        renderAuthBar();
+        return;
+      }
+      const display = user.global || user.name || user.username || 'игрок';
+      bar.innerHTML =
+        '<div class="auth-user">' +
+          (user.avatar
+            ? '<img class="auth-avatar" src="' + escapeHtml(user.avatar) + '" alt="">'
+            : '<span class="auth-avatar fallback">' + escapeHtml((display.charAt(0) || '?').toUpperCase()) + '</span>') +
+          '<div class="auth-copy"><b>' + escapeHtml(display) + '</b>' +
+          '<span>Вошёл через Discord · рекорды синхронизируются</span></div>' +
+        '</div>' +
+        '<button class="auth-btn ghost" id="authLogout" type="button">Выйти</button>';
+      const out = document.getElementById('authLogout');
+      if (out) out.addEventListener('click', function () {
+        auth.logout().then(function () { renderAuthBar(); });
+      });
+    });
   }
 
   function renderProfilePage() {
     const root = document.getElementById('profileRoot');
     if (!root) return;
+
+    let params = null;
+    try { params = new URLSearchParams(location.search); } catch (e) {}
+
+    const viewUid = params ? (params.get('uid') || '').trim() : '';
+    if (viewUid) {
+      renderPublicUid(root, viewUid);
+      return;
+    }
+
+    let viewName = params ? (params.get('name') || '').trim() : '';
+    if (viewName && viewName.toLowerCase() !== playerName().toLowerCase()) {
+      renderPublicProfile(root, viewName);
+      return;
+    }
+
     const state = load();
     const info = levelInfo(state);
     const name = playerName();
@@ -309,6 +502,7 @@
     }).join('');
 
     root.innerHTML =
+      '<div class="auth-bar" id="authBar"><div class="auth-copy"><b>Проверяю вход…</b></div></div>' +
       '<div class="profile-hero">' +
         '<div class="profile-avatar">' + escapeHtml((name || '?').charAt(0).toUpperCase()) + '</div>' +
         '<div class="profile-id">' +
@@ -341,6 +535,7 @@
       if (e.key === 'Enter') renameSave.click();
     });
 
+    renderAuthBar();
     checkOnline();
   }
 
@@ -378,6 +573,8 @@
       '.arcade-mini-badges{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px}',
       '.arcade-mini-badge{font-size:12px; color:#cdd9e5; border:1px solid #1e2b38; border-radius:99px; padding:6px 12px; background:rgba(255,255,255,.02)}',
       '.arcade-mini-empty{font-size:12px; color:#7c8b9a; font-style:italic}',
+      '.arcade-auth-hint{margin-top:12px; font-size:12px; color:#7c8b9a}',
+      '.arcade-auth-hint a{color:#39ff88; text-decoration:none; border-bottom:1px dotted rgba(57,255,136,.4)}',
       '@media (max-width:560px){.arcade-toast{max-width:100%}.arcade-profile{padding:18px}.arcade-card-link{width:100%; text-align:center}}'
     ].join('\n');
     document.head.appendChild(style);
@@ -415,7 +612,8 @@
     name: playerName,
     setName: setPlayerName,
     check: checkAchievements,
-    checkOnline: checkOnline
+    checkOnline: checkOnline,
+    markSecret: markSecret
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

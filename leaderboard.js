@@ -4,8 +4,39 @@
   const MIGRATED_KEY = 'lb_migrated_v1';
   const ONLINE_URL = 'https://brickyard-leaderboard.brickyard-leaderboard.workers.dev';
   const LIMIT = 10;
+  const TOKEN_KEY = 'arcade_token';
   const onlineCache = {};
   const onlineRequests = {};
+
+  /* Discord-вход: токен приходит в #arcade_token после OAuth-редиректа. */
+  function readToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function setToken(value) {
+    try {
+      if (value) localStorage.setItem(TOKEN_KEY, value);
+      else localStorage.removeItem(TOKEN_KEY);
+    } catch (e) {}
+  }
+
+  (function captureToken() {
+    try {
+      const hash = location.hash || '';
+      if (hash.indexOf('arcade_token=') === -1) return;
+      const params = new URLSearchParams(hash.replace(/^#/, ''));
+      const token = params.get('arcade_token');
+      if (token) setToken(token);
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) {}
+  })();
+
+  function authHeaders(extra) {
+    const headers = extra || {};
+    const token = readToken();
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return headers;
+  }
 
   function normalizeList(list) {
     const map = new Map();
@@ -71,7 +102,7 @@
   function postScore(game, name, score) {
     return fetch(ONLINE_URL + '/scores', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ game: game, name: name, score: score })
     })
       .then(function (res) { return res.ok ? res.json() : null; })
@@ -211,13 +242,50 @@
     return n;
   };
 
-  /* Мини-виджет таблицы: <div data-lb="snake" data-lb-title="Змейка"></div> */
+  /* Discord-вход и профили. */
+  window.lbAuth = {
+    token: readToken,
+    setToken: setToken,
+    clear: function () { setToken(''); },
+    loginUrl: function (returnTo) {
+      const back = returnTo || (location.origin + location.pathname + location.search);
+      return ONLINE_URL + '/auth/login?returnTo=' + encodeURIComponent(back);
+    },
+    me: function () {
+      if (!readToken()) return Promise.resolve(null);
+      return fetch(ONLINE_URL + '/auth/me', { headers: authHeaders(), cache: 'no-store' })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) { return data && data.ok ? data.user : null; })
+        .catch(function () { return null; });
+    },
+    logout: function () {
+      const token = readToken();
+      setToken('');
+      if (!token) return Promise.resolve();
+      return fetch(ONLINE_URL + '/auth/logout', { method: 'POST', headers: authHeaders() })
+        .catch(function () {});
+    }
+  };
+
+  window.lbFetchProfile = function (uid) {
+    return fetch(ONLINE_URL + '/profile?uid=' + encodeURIComponent(String(uid)), { cache: 'no-store' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .catch(function () { return null; });
+  };
+
+  /* Мини-виджет таблицы: <div data-lb="snake" data-lb-title="Змейка" data-lb-limit="10"></div> */
+  window.lbProfileUrl = function (name, uid) {
+    if (uid) return 'profile.html?uid=' + encodeURIComponent(String(uid));
+    return 'profile.html?name=' + encodeURIComponent(String(name || ''));
+  };
+
   window.lbMount = function (el) {
     const game = el.getAttribute('data-lb');
     const title = el.getAttribute('data-lb-title') || game;
+    const limit = Math.max(1, Math.min(50, Number(el.getAttribute('data-lb-limit')) || 5));
 
     const render = function () {
-      const rows = window.lbTop(game, 5);
+      const rows = window.lbTop(game, limit);
       const onlineRows = onlineCache[game];
       const online = Array.isArray(onlineRows) && onlineRows.length > 0;
       const localOnly = Array.isArray(onlineRows) && onlineRows.length === 0 && rows.length > 0;
@@ -227,7 +295,7 @@
         (rows.length
           ? rows.map(function (r, i) {
               return '<div class="lb-row"><span class="lb-pos">' + (i + 1) + '</span>' +
-                     '<span class="lb-name">' + escapeHtml(r.n) + '</span>' +
+                     '<a class="lb-name" href="' + window.lbProfileUrl(r.n, r.uid) + '" title="Открыть профиль">' + escapeHtml(r.n) + '</a>' +
                      '<b class="lb-score">' + r.s + '</b></div>';
             }).join('')
           : '<div class="lb-empty">пока пусто</div>');
