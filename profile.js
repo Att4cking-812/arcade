@@ -504,11 +504,12 @@
     root.innerHTML =
       '<div class="auth-bar" id="authBar"><div class="auth-copy"><b>Проверяю вход…</b></div></div>' +
       '<div class="profile-hero">' +
-        '<div class="profile-avatar">' + escapeHtml((name || '?').charAt(0).toUpperCase()) + '</div>' +
+        '<div class="profile-avatar" id="heroAvatar">' + escapeHtml((name || '?').charAt(0).toUpperCase()) + '</div>' +
         '<div class="profile-id">' +
-          '<div class="profile-name-row"><h1>' + escapeHtml(name || 'Безымянный игрок') + '</h1>' +
+          '<div class="profile-name-row"><h1 id="heroName">' + escapeHtml(name || 'Безымянный игрок') + '</h1>' +
+          '<span class="profile-discord-tag" id="discordTag" hidden>Discord</span>' +
           '<button id="renameBtn" class="profile-rename">Сменить ник</button></div>' +
-          '<div class="profile-sub">' + info.name + ' · уровень ' + info.index + ' · ' + info.total + ' сессий</div>' +
+          '<div class="profile-sub" id="heroSub">' + info.name + ' · уровень ' + info.index + ' · ' + info.total + ' сессий</div>' +
           '<div id="renameBox" class="profile-rename-box" hidden>' +
             '<input id="renameInput" maxlength="16" placeholder="Новый ник" value="' + escapeHtml(name) + '">' +
             '<button id="renameSave">Сохранить</button>' +
@@ -536,7 +537,32 @@
     });
 
     renderAuthBar();
+    applyDiscordHero();
     checkOnline();
+
+    function applyDiscordHero() {
+      const auth = window.lbAuth;
+      if (!auth || !auth.token()) return;
+      auth.me().then(function (user) {
+        if (!user) return;
+        const display = user.global || user.name || user.username || '';
+        const av = document.getElementById('heroAvatar');
+        if (av && user.avatar) {
+          av.innerHTML = '<img src="' + escapeHtml(user.avatar) + '" alt="' + escapeHtml(display) + '">';
+        } else if (av && display) {
+          av.textContent = display.charAt(0).toUpperCase();
+        }
+        const nm = document.getElementById('heroName');
+        if (nm) nm.textContent = display;
+        const tag = document.getElementById('discordTag');
+        if (tag) tag.hidden = false;
+        const sub = document.getElementById('heroSub');
+        if (sub) {
+          sub.innerHTML = escapeHtml(info.name) + ' · уровень ' + info.index + ' · ' +
+            info.total + ' сессий · рекорды под ником <b>' + escapeHtml(display) + '</b>';
+        }
+      });
+    }
   }
 
   function installToastStyles() {
