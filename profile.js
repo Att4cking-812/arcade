@@ -268,7 +268,19 @@
 
   /* Онлайн-достижения: проверяем по данным воркера.
      Если вошёл через Discord — сверяем по uid, а не по нику. */
+  const LEGACY_BEST = { snake: 'snake_best', g2048: 'g2048_best', seabattle: 'seabattle_best', tetris: 'tetris_best' };
   let onlineChecked = false;
+  function applyOnlineBest(state, game, score) {
+    const value = Number(score) || 0;
+    if (value <= bestOf(state, game)) return false;
+    state.best[game] = value;
+    const legacy = LEGACY_BEST[game];
+    if (legacy) {
+      try { localStorage.setItem(legacy, String(value)); } catch (e) {}
+    }
+    return true;
+  }
+
   function checkOnline() {
     if (onlineChecked || typeof window.lbFetchOnline !== 'function') return Promise.resolve();
     onlineChecked = true;
@@ -298,7 +310,10 @@
             if (uid && row.uid) return String(row.uid) === uid;
             return !!needle && String(row.n || '').toLowerCase() === needle;
           });
-          if (idx >= 0) inTable = true;
+          if (idx >= 0) {
+            inTable = true;
+            if (applyOnlineBest(state, r.game, r.rows[idx].s)) changed = true;
+          }
           if (idx === 0) first = true;
         });
 
@@ -532,6 +547,215 @@
     });
   }
 
+  /* Карточка профиля для шаринга: рисуем PNG прямо в браузере. */
+  function shareProfile() {
+    const state = load();
+    const info = levelInfo(state);
+    let name = playerName() || 'Игрок Brickyard';
+    const unlocked = ACHIEVEMENTS.filter(function (b) { return state.unlocked[b.id]; }).length;
+    const top = GAME_KEYS.map(function (g) { return { game: g, best: bestOf(state, g) }; })
+      .filter(function (x) { return x.best > 0; })
+      .sort(function (a, b) { return b.best - a.best; })
+      .slice(0, 3);
+
+    const W = 1200, H = 630;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    function rr(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function draw(avatar) {
+      const bg = ctx.createLinearGradient(0, 0, W, H);
+      bg.addColorStop(0, '#0a0d12');
+      bg.addColorStop(.55, '#0d1720');
+      bg.addColorStop(1, '#101f1a');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      const glow1 = ctx.createRadialGradient(120, 90, 0, 120, 90, 420);
+      glow1.addColorStop(0, 'rgba(57,255,136,.24)');
+      glow1.addColorStop(1, 'rgba(57,255,136,0)');
+      ctx.fillStyle = glow1;
+      ctx.fillRect(0, 0, W, H);
+
+      const glow2 = ctx.createRadialGradient(1080, 560, 0, 1080, 560, 460);
+      glow2.addColorStop(0, 'rgba(0,212,255,.20)');
+      glow2.addColorStop(1, 'rgba(0,212,255,0)');
+      ctx.fillStyle = glow2;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.strokeStyle = 'rgba(255,255,255,.045)';
+      ctx.lineWidth = 1;
+      for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 40; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+      rr(26, 26, W - 52, H - 52, 28);
+      ctx.strokeStyle = 'rgba(57,255,136,.28)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.font = '700 22px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#39ff88';
+      ctx.fillText('BRICKYARD ARCADE', 72, 92);
+
+      const ax = 148, ay = 238, ar = 76;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ax, ay, ar, 0, Math.PI * 2);
+      ctx.clip();
+      if (avatar) {
+        ctx.drawImage(avatar, ax - ar, ay - ar, ar * 2, ar * 2);
+      } else {
+        const av = ctx.createLinearGradient(ax - ar, ay - ar, ax + ar, ay + ar);
+        av.addColorStop(0, '#39ff88');
+        av.addColorStop(1, '#00d4ff');
+        ctx.fillStyle = av;
+        ctx.fillRect(ax - ar, ay - ar, ar * 2, ar * 2);
+        ctx.fillStyle = '#06130b';
+        ctx.font = '800 64px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText((name.charAt(0) || '?').toUpperCase(), ax, ay + 4);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(ax, ay, ar, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(57,255,136,.55)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.fillStyle = '#e8f1f8';
+      ctx.font = '800 52px "Segoe UI", Arial, sans-serif';
+      const shortName = name.length > 22 ? name.slice(0, 21) + '…' : name;
+      ctx.fillText(shortName, 256, 220);
+
+      ctx.fillStyle = '#8fa0b0';
+      ctx.font = '500 25px "Segoe UI", Arial, sans-serif';
+      ctx.fillText('Уровень ' + info.index + ' · ' + info.name + ' · ' + info.total + ' сессий', 256, 262);
+
+      ctx.fillStyle = '#39ff88';
+      ctx.font = '800 58px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(String(unlocked), 256, 342);
+      ctx.fillStyle = '#8fa0b0';
+      ctx.font = '500 21px "Segoe UI", Arial, sans-serif';
+      ctx.fillText('из ' + ACHIEVEMENTS.length + ' достижений', 256, 374);
+
+      const cardY = 424;
+      const cardW = 328, gap = 22;
+      const startX = 72;
+      if (top.length) {
+        top.forEach(function (item, i) {
+          const x = startX + i * (cardW + gap);
+          rr(x, cardY, cardW, 118, 18);
+          ctx.fillStyle = 'rgba(255,255,255,.045)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,.09)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.font = '600 22px "Segoe UI", Arial, sans-serif';
+          ctx.fillStyle = '#8fa0b0';
+          ctx.fillText(GAMES[item.game].name, x + 22, cardY + 38);
+          ctx.font = '800 38px "Segoe UI", Arial, sans-serif';
+          ctx.fillStyle = '#e8f1f8';
+          ctx.fillText(String(item.best), x + 22, cardY + 84);
+          ctx.font = '28px "Segoe UI", Arial, sans-serif';
+          ctx.fillStyle = '#39ff88';
+          ctx.fillText(GAMES[item.game].icon, x + cardW - 56, cardY + 84);
+        });
+      } else {
+        rr(startX, cardY, W - 144, 118, 18);
+        ctx.fillStyle = 'rgba(255,255,255,.04)';
+        ctx.fill();
+        ctx.fillStyle = '#8fa0b0';
+        ctx.font = '500 24px "Segoe UI", Arial, sans-serif';
+        ctx.fillText('Пока нет рекордов — самое время начать.', startX + 24, cardY + 68);
+      }
+
+      ctx.fillStyle = '#526372';
+      ctx.font = '500 20px "Segoe UI", Arial, sans-serif';
+      ctx.fillText('att4cking-812.github.io/arcade', 72, 594);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#39ff88';
+      ctx.fillText('твой профиль в аркаде', W - 72, 594);
+      ctx.textAlign = 'left';
+    }
+
+    function finish(avatar) {
+      draw(avatar);
+      return new Promise(function (resolve) {
+        canvas.toBlob(function (blob) {
+          if (!blob) { resolve(false); return; }
+          const file = new File([blob], 'brickyard-profile.png', { type: 'image/png' });
+          const shareData = {
+            title: 'Мой профиль в Brickyard Arcade',
+            text: name + ' · уровень ' + info.index + ' · ' + unlocked + ' достижений',
+            files: [file]
+          };
+          if (navigator.canShare && navigator.canShare(shareData)) {
+            navigator.share(shareData).then(function () { resolve(true); }).catch(function () { resolve(false); });
+            return;
+          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'brickyard-profile.png';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+          resolve(true);
+        }, 'image/png');
+      });
+    }
+
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn) { shareBtn.disabled = true; shareBtn.textContent = 'Готовлю…'; }
+
+    const auth = window.lbAuth;
+    const mePromise = (auth && auth.token() && typeof auth.me === 'function')
+      ? auth.me().catch(function () { return null; })
+      : Promise.resolve(null);
+
+    return mePromise.then(function (me) {
+      if (me) name = me.global || me.name || me.username || name;
+      const avatarUrl = me && me.avatar ? me.avatar : '';
+      if (!avatarUrl) return finish(null);
+      return new Promise(function (resolve) {
+        const img = new Image();
+        let done = false;
+        const settle = function (value) {
+          if (done) return;
+          done = true;
+          resolve(value);
+        };
+        img.crossOrigin = 'anonymous';
+        img.onload = function () { settle(img); };
+        img.onerror = function () { settle(null); };
+        img.src = avatarUrl;
+        setTimeout(function () { settle(null); }, 1800);
+      }).then(function (img) { return finish(img); });
+    }).then(function (ok) {
+      if (shareBtn) {
+        shareBtn.disabled = false;
+        shareBtn.textContent = ok ? '✅ Готово' : '📸 Поделиться';
+        setTimeout(function () { shareBtn.textContent = '📸 Поделиться'; }, 2200);
+      }
+    }).catch(function () {
+      if (shareBtn) { shareBtn.disabled = false; shareBtn.textContent = '📸 Поделиться'; }
+    });
+  }
+
   function renderProfilePage() {
     const root = document.getElementById('profileRoot');
     if (!root) return;
@@ -578,7 +802,8 @@
         '<div class="profile-id">' +
           '<div class="profile-name-row"><h1 id="heroName">' + escapeHtml(name || 'Безымянный игрок') + '</h1>' +
           '<span class="profile-discord-tag" id="discordTag" hidden>Discord</span>' +
-          '<button id="renameBtn" class="profile-rename">Сменить ник</button></div>' +
+          '<button id="renameBtn" class="profile-rename">Сменить ник</button>' +
+          '<button id="shareBtn" class="profile-share">📸 Поделиться</button></div>' +
           '<div class="profile-sub" id="heroSub">' + info.name + ' · уровень ' + info.index + ' · ' + info.total + ' сессий</div>' +
           '<div id="renameBox" class="profile-rename-box" hidden>' +
             '<input id="renameInput" maxlength="16" placeholder="Новый ник" value="' + escapeHtml(name) + '">' +
@@ -594,6 +819,8 @@
 
     const renameBtn = document.getElementById('renameBtn');
     const renameBox = document.getElementById('renameBox');
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn) shareBtn.addEventListener('click', function () { shareProfile(); });
     if (renameBtn) renameBtn.addEventListener('click', function () {
       renameBox.hidden = !renameBox.hidden;
       if (!renameBox.hidden) document.getElementById('renameInput').focus();
@@ -765,7 +992,7 @@
     checkAchievements();
     renderCard();
     renderProfilePage();
-    if (document.getElementById('profileCard') || document.getElementById('profileRoot')) checkOnline();
+    if (authHeaders() || document.getElementById('profileCard') || document.getElementById('profileRoot')) checkOnline();
     syncFromServer();
 
     if (typeof window.lbSubmit === 'function' && !window.lbSubmit.__arcadeWrapped) {
@@ -794,7 +1021,8 @@
     check: checkAchievements,
     checkOnline: checkOnline,
     markSecret: markSecret,
-    daily: dailyInfo
+    daily: dailyInfo,
+    share: shareProfile
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

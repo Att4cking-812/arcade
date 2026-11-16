@@ -140,7 +140,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="leaderboard.js?v=15"></script>
-<script src="profile.js?v=6"></script>
+<script src="profile.js?v=7"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -401,6 +401,7 @@ canvas.addEventListener('touchend', e => {
   const t = e.changedTouches[0];
   const dx = t.clientX - tsx, dy = t.clientY - tsy;
   if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+  if (navigator.vibrate) { try { navigator.vibrate(8); } catch (err) {} }
   if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? 1 : -1, 0);
   else turn(0, dy > 0 ? 1 : -1);
 }, { passive: true });

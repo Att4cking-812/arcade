@@ -28,6 +28,7 @@
   .stat{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 18px; min-width:96px}
   .stat b{display:block; font-size:20px; color:var(--neon)}
   .stat small{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px}
+  .board-wrap{max-width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; padding:2px 0 8px}
   .board{
     display:inline-grid; gap:4px; padding:12px; border-radius:16px; max-width:100%;
     background:linear-gradient(160deg,#0f1720,#0a1118); border:1px solid var(--line);
@@ -40,6 +41,7 @@
     color:#dfe9f2; font-weight:800; font-size:16px; display:grid; place-items:center;
     transition:background .12s, transform .08s; padding:0;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+    touch-action:manipulation;
   }
   .cell:hover{background:linear-gradient(145deg,#2b3d4d,#1f2c38)}
   .cell:active{transform:scale(.96)}
@@ -74,7 +76,12 @@
   .modal{background:linear-gradient(160deg,#121b25,#0e151d); border:1px solid var(--line); border-radius:18px; padding:28px 34px; text-align:center; max-width:360px}
   .modal h2{margin:0 0 8px; font-size:28px}
   .modal p{margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.5}
-  @media (max-width:520px){ :root .cell{font-size:14px} h1{font-size:26px} }
+  @media (max-width:520px){
+    :root .cell{font-size:14px}
+    h1{font-size:26px}
+    #flagMode{width:100%; padding:12px 16px}
+    .btns{gap:8px}
+  }
 </style>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Brickyard Arcade">
@@ -101,7 +108,7 @@
     <div class="stat"><b id="flagsCount">0</b><small>флагов</small></div>
   </div>
 
-  <div class="board" id="board"></div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
 
   <div class="btns">
     <div class="seg" id="modes">
@@ -286,9 +293,9 @@ function updateHint() {
   } else if (mode === 'normal') {
     const p = NORMAL[densityKey];
     hintEl.textContent = 'Обычное поле ' + p.cols + '×' + p.rows + ' · ' + p.mines +
-      ' мин · не расширяется · ЛКМ — открыть · ПКМ — флажок · ПКМ по цифре — её зона';
+      ' мин · не расширяется · ЛКМ — открыть · ПКМ — флажок · ПКМ по цифре — её зона · на телефоне — долгое нажатие или режим флажка';
   } else {
-    hintEl.textContent = 'Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок · ПКМ по цифре — её зона';
+    hintEl.textContent = 'Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок · ПКМ по цифре — её зона · на телефоне — долгое нажатие или режим флажка';
   }
 }
 
@@ -380,7 +387,7 @@ function cellSize(cols) {
   const gap = 4, padding = 24;
   const available = Math.min(window.innerWidth - 28, 720);
   const size = Math.floor((available - padding - (cols - 1) * gap) / cols);
-  return Math.max(14, Math.min(34, size));
+  return Math.max(20, Math.min(34, size));
 }
 
 function render() {
@@ -690,7 +697,7 @@ if (params.has('secret')) {
 }
 </script>
 <script src="leaderboard.js?v=15"></script>
-<script src="profile.js?v=6"></script>
+<script src="profile.js?v=7"></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}</script>
 </body>
 </html>

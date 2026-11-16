@@ -46,9 +46,12 @@
   .profile-id{flex:1; min-width:220px}
   .profile-name-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
   .profile-name-row h1{font-size:clamp(24px,4vw,34px); letter-spacing:-.6px}
-  .profile-rename{background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:9px;
-    padding:6px 11px; font-size:12px; cursor:pointer; transition:.2s}
+  .profile-rename{background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:9px;    padding:6px 11px; font-size:12px; cursor:pointer; transition:.2s}
   .profile-rename:hover{color:var(--text); border-color:rgba(57,255,136,.45)}
+  .profile-share{background:rgba(57,255,136,.10); color:var(--neon); border:1px solid rgba(57,255,136,.38);
+    border-radius:9px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; transition:.2s}
+  .profile-share:hover{background:rgba(57,255,136,.18); border-color:rgba(57,255,136,.6)}
+  .profile-share:disabled{opacity:.6; cursor:wait}
   .profile-sub{color:var(--muted); font-size:14px; margin-top:6px}
   .profile-rename-box{display:flex; gap:8px; margin-top:12px}
   .profile-rename-box[hidden]{display:none}
@@ -153,6 +156,6 @@
   }
 </script>
 <script src="leaderboard.js?v=15"></script>
-<script src="profile.js?v=6"></script>
+<script src="profile.js?v=7"></script>
 </body>
 </html>

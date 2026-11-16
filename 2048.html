@@ -308,10 +308,14 @@ let sx = 0, sy = 0;
 boardEl.addEventListener('touchstart', (e) => {
   sx = e.touches[0].clientX; sy = e.touches[0].clientY;
 }, { passive: true });
+boardEl.addEventListener('touchmove', (e) => {
+  if (e.cancelable) e.preventDefault();
+}, { passive: false });
 boardEl.addEventListener('touchend', (e) => {
   const dx = e.changedTouches[0].clientX - sx;
   const dy = e.changedTouches[0].clientY - sy;
   if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+  if (navigator.vibrate) { try { navigator.vibrate(8); } catch (err) {} }
   if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
   else move(dy > 0 ? 'down' : 'up');
 }, { passive: true });
@@ -326,7 +330,7 @@ document.getElementById('ovContinue').addEventListener('click', () => {
 newGame();
 </script>
 <script src="leaderboard.js?v=15"></script>
-<script src="profile.js?v=6"></script>
+<script src="profile.js?v=7"></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}</script>
 </body>
 </html>
