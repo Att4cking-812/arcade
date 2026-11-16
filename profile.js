@@ -42,8 +42,38 @@
     { id: 'allbest', icon: '🏅', title: 'Полный комплект', desc: 'Оставь рекорд во всех шести играх.', test: function (s) { return GAME_KEYS.every(function (g) { return bestOf(s, g) > 0; }); } },
     { id: 'online', icon: '🌐', title: 'В сети', desc: 'Твой рекорд попал в онлайн-таблицу.', test: function () { return false; } },
     { id: 'top1', icon: '👑', title: 'Лучший на сервере', desc: 'Займи первое место в любой онлайн-таблице.', test: function () { return false; } },
-    { id: 'detective', icon: '🕵️', title: 'Детектив', desc: 'Найди секретный уровень сапёра с 80 минами.', test: function (s) { return !!(s.secrets && s.secrets.mines80); } }
+    { id: 'detective', icon: '🕵️', title: 'Детектив', desc: 'Найди секретный уровень сапёра с 80 минами.', test: function (s) { return !!(s.secrets && s.secrets.mines80); } },
+    { id: 'streak7', icon: '🗓', title: 'Неделя в аркаде', desc: 'Заходи в аркаду семь дней подряд.', test: function (s) { return streakDays(s) >= 7; } },
+    { id: 'plays300', icon: '🏛', title: 'Живая легенда', desc: 'Проведи 300 игровых сессий.', test: function (s) { return totalPlays(s) >= 300; } },
+    { id: 'snake50', icon: '🐍', title: 'Змейка: 50 яблок', desc: 'Набери 50 очков в змейке.', test: function (s) { return bestOf(s, 'snake') >= 50; } },
+    { id: 'g4096', icon: '🔢', title: '2048: 4096', desc: 'Собери плитку 4096.', test: function (s) { return bestOf(s, 'g2048') >= 4096; } },
+    { id: 'mines1500', icon: '💣', title: 'Сапёр: 1500', desc: 'Набери 1500 очков в сапёре.', test: function (s) { return bestOf(s, 'mines') >= 1500; } },
+    { id: 'tetris10000', icon: '🧱', title: 'Тетрис: 10000', desc: 'Набери 10 000 очков в тетрисе.', test: function (s) { return bestOf(s, 'tetris') >= 10000; } },
+    { id: 'sea1200', icon: '🚢', title: 'Морской бой: 1200', desc: 'Победи ИИ с отличным счётом.', test: function (s) { return bestOf(s, 'seabattle') >= 1200; } },
+    { id: 'daily1', icon: '📌', title: 'Задание дня', desc: 'Выполни ежедневный вызов.', test: function (s) { return dailyCount(s) >= 1; } },
+    { id: 'daily7', icon: '🧭', title: 'Неделя вызовов', desc: 'Выполни семь ежедневных вызовов.', test: function (s) { return dailyCount(s) >= 7; } }
   ];
+
+  /* Ежедневный вызов: одна игра и одна цель на день, выбор стабилен по дате. */
+  const CHALLENGES = [
+    { game: 'snake', target: 10, title: 'Набери 10 яблок в змейке' },
+    { game: 'g2048', target: 512, title: 'Собери плитку 512 в 2048' },
+    { game: 'mines', target: 400, title: 'Набери 400 очков в сапёре' },
+    { game: 'hangman', target: 100, title: 'Угадай слово в виселице' },
+    { game: 'tetris', target: 1500, title: 'Набери 1500 очков в тетрисе' },
+    { game: 'seabattle', target: 600, title: 'Победи ИИ в морском бою' },
+    { game: 'snake', target: 20, title: 'Набери 20 яблок в змейке' }
+  ];
+
+  function dailyInfo() {
+    const day = Math.floor(Date.now() / 86400000);
+    const base = CHALLENGES[((day % CHALLENGES.length) + CHALLENGES.length) % CHALLENGES.length];
+    return Object.assign({}, base, { key: dateKey(), icon: GAMES[base.game].icon, name: GAMES[base.game].name });
+  }
+
+  function dailyCount(state) {
+    return state.daily ? Object.keys(state.daily).length : 0;
+  }
 
   function load() {
     try {
@@ -55,6 +85,7 @@
       state.days = state.days && typeof state.days === 'object' ? state.days : {};
       state.unlocked = state.unlocked && typeof state.unlocked === 'object' ? state.unlocked : {};
       state.secrets = state.secrets && typeof state.secrets === 'object' ? state.secrets : {};
+      state.daily = state.daily && typeof state.daily === 'object' ? state.daily : {};
       // Подхватываем старые локальные рекорды, чтобы достижения не терялись.
       [['snake', 'snake_best'], ['g2048', 'g2048_best'], ['seabattle', 'seabattle_best']].forEach(function (pair) {
         if (Number(state.best[pair[0]]) > 0) return;
@@ -65,7 +96,7 @@
       });
       return state;
     } catch (e) {
-      return { plays: {}, best: {}, days: {}, unlocked: {}, secrets: {} };
+      return { plays: {}, best: {}, days: {}, unlocked: {}, secrets: {}, daily: {} };
     }
   }
 
@@ -143,7 +174,8 @@
     schedulePush();
   }
 
-  function recordScore(game, name, score) {    const state = load();
+  function recordScore(game, name, score) {
+    const state = load();
     const value = Math.round(Number(score));
     if (Number.isFinite(value) && value > bestOf(state, game)) {
       state.best[game] = value;
@@ -152,6 +184,13 @@
     }
     if (!playerName() && name) {
       try { localStorage.setItem('player_name', String(name).trim().slice(0, 16)); } catch (e) {}
+    }
+    const challenge = dailyInfo();
+    if (Number.isFinite(value) && game === challenge.game && value >= challenge.target && !state.daily[challenge.key]) {
+      state.daily[challenge.key] = 1;
+      save(state);
+      schedulePush();
+      showToast({ icon: '📌', title: 'Ежедневный вызов', desc: challenge.title + ' — выполнено!' });
     }
     checkAchievements();
   }
@@ -289,8 +328,22 @@
       '<div class="arcade-level-next">' + (info.next ? ('до «' + escapeHtml(info.next.name) + '»: ' + (info.next.min - info.total) + ' сессий') : 'максимальный уровень') + '</div></div>';
   }
 
-  function renderCard() {
-    const el = document.getElementById('profileCard');
+  function dailyHtml(state) {
+    const c = dailyInfo();
+    const done = !!state.daily[c.key];
+    const best = bestOf(state, c.game);
+    return '<div class="arcade-daily' + (done ? ' done' : '') + '">' +
+      '<div class="arcade-daily-icon">' + c.icon + '</div>' +
+      '<div class="arcade-daily-text">' +
+        '<div class="arcade-daily-kicker">Ежедневный вызов</div>' +
+        '<div class="arcade-daily-title">' + escapeHtml(c.title) + '</div>' +
+        '<div class="arcade-daily-sub">' + (done ? '✅ Выполнено сегодня' : 'Цель: ' + c.target + ' · твой рекорд: ' + (best > 0 ? best : '—')) + '</div>' +
+      '</div>' +
+      '<a class="arcade-daily-link" href="' + GAMES[c.game].page + '">Играть →</a>' +
+    '</div>';
+  }
+
+  function renderCard() {    const el = document.getElementById('profileCard');
     if (!el) return;
     const state = load();
     const name = playerName() || 'Безымянный игрок';
@@ -306,6 +359,7 @@
         '<a class="arcade-card-link" href="profile.html">Профиль →</a>' +
       '</div>' +
       progressHtml(state) +
+      dailyHtml(state) +
       '<div class="arcade-mini-badges">' +
         (latest.length
           ? latest.map(function (b) { return '<span class="arcade-mini-badge" title="' + escapeHtml(b.desc) + '">' + b.icon + ' ' + escapeHtml(b.title) + '</span>'; }).join('')
@@ -534,6 +588,7 @@
         '<div class="profile-score"><b>' + unlockedCount + '</b><span>из ' + ACHIEVEMENTS.length + '</span></div>' +
       '</div>' +
       progressHtml(state) +
+      dailyHtml(state) +
       '<div class="profile-section"><h2>Рекорды по играм</h2><div class="profile-bests">' + bestRows + '</div></div>' +
       '<div class="profile-section"><h2>Достижения</h2><div class="profile-badges">' + badges + '</div></div>';
 
@@ -612,6 +667,14 @@
       '.arcade-level-bar{height:8px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden}',
       '.arcade-level-bar i{display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#39ff88,#00d4ff); box-shadow:0 0 14px rgba(57,255,136,.4)}',
       '.arcade-level-next{font-size:12px; color:#7c8b9a; margin-top:6px}',
+      '.arcade-daily{display:flex; align-items:center; gap:12px; margin-top:16px; padding:13px 15px; border-radius:14px; border:1px solid rgba(0,212,255,.28); background:linear-gradient(135deg, rgba(0,212,255,.09), rgba(57,255,136,.05))}',
+      '.arcade-daily.done{border-color:rgba(57,255,136,.45); background:linear-gradient(135deg, rgba(57,255,136,.13), rgba(0,212,255,.05))}',
+      '.arcade-daily-icon{width:38px; height:38px; border-radius:12px; display:grid; place-items:center; font-size:20px; background:#0d141c; border:1px solid #1e2b38; flex:none}',
+      '.arcade-daily-text{flex:1; min-width:0}',
+      '.arcade-daily-kicker{font-size:10px; letter-spacing:1.4px; text-transform:uppercase; color:#00d4ff}',
+      '.arcade-daily-title{font-size:14px; font-weight:700; margin:2px 0}',
+      '.arcade-daily-sub{font-size:12px; color:#7c8b9a}',
+      '.arcade-daily-link{color:#39ff88; text-decoration:none; font-size:13px; font-weight:700; white-space:nowrap}',
       '.arcade-mini-badges{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px}',
       '.arcade-mini-badge{font-size:12px; color:#cdd9e5; border:1px solid #1e2b38; border-radius:99px; padding:6px 12px; background:rgba(255,255,255,.02)}',
       '.arcade-mini-empty{font-size:12px; color:#7c8b9a; font-style:italic}',
@@ -627,12 +690,12 @@
 
   function mergeStates(a, b) {
     const out = {
-      plays: {}, best: {}, days: {}, unlocked: {}, secrets: {},
+      plays: {}, best: {}, days: {}, unlocked: {}, secrets: {}, daily: {},
       night: (a && a.night) || (b && b.night) ? 1 : 0
     };
     [a, b].forEach(function (s) {
       if (!s || typeof s !== 'object') return;
-      ['plays', 'best', 'unlocked', 'secrets'].forEach(function (field) {
+      ['plays', 'best', 'unlocked', 'secrets', 'daily'].forEach(function (field) {
         const src = s[field];
         if (!src || typeof src !== 'object') return;
         Object.keys(src).forEach(function (k) {
@@ -730,7 +793,8 @@
     setName: setPlayerName,
     check: checkAchievements,
     checkOnline: checkOnline,
-    markSecret: markSecret
+    markSecret: markSecret,
+    daily: dailyInfo
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
