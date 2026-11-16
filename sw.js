@@ -1,4 +1,4 @@
-const CACHE = 'arcade-v18';
+const CACHE = 'arcade-v20';
 const ASSETS = [
   './',
   'index.html',
@@ -14,9 +14,9 @@ const ASSETS = [
   'tournament.html',
   'quest.html',
   'leaderboard.js',
-  'leaderboard.js?v=14',
+  'leaderboard.js?v=15',
   'profile.js',
-  'profile.js?v=4',
+  'profile.js?v=5',
   'profile.html',
   'leaderboard.html',
   'manifest.webmanifest',

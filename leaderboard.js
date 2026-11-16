@@ -49,10 +49,12 @@
       if (!Number.isFinite(score) || score <= 0) return;
       const prev = map.get(key);
       if (!prev) {
-        map.set(key, { n: name, s: score, d: row.d || '' });
+        map.set(key, { n: name, s: score, d: row.d || '', uid: row.uid || null, a: row.a || null });
       } else if (score > prev.s) {
         prev.s = score;
         if (row.d) prev.d = row.d;
+        if (row.uid) prev.uid = row.uid;
+        if (row.a) prev.a = row.a;
       }
     });
     return Array.from(map.values())
@@ -109,6 +111,35 @@
       .catch(function () { return null; });
   }
 
+  /* Ответ POST и GET может прийти из KV с задержкой: храним объединение,
+     чтобы свежий рекорд никогда не пропадал из таблицы. */
+  function mergeRows(a, b) {
+    const map = new Map();
+    const keyOf = function (r) {
+      if (r.uid) return 'u:' + String(r.uid);
+      return 'n:' + String(r.n || '').toLowerCase();
+    };
+    (Array.isArray(a) ? a : []).concat(Array.isArray(b) ? b : []).forEach(function (r) {
+      if (!r || typeof r.n !== 'string') return;
+      const k = keyOf(r);
+      const prev = map.get(k);
+      const score = Number(r.s) || 0;
+      if (!prev || score > (Number(prev.s) || 0)) {
+        map.set(k, Object.assign({}, prev || {}, r));
+      } else if (prev && !prev.uid && r.uid) {
+        prev.uid = r.uid;
+      }
+    });
+    return Array.from(map.values())
+      .sort(function (x, y) { return (Number(y.s) || 0) - (Number(x.s) || 0); })
+      .slice(0, 50);
+  }
+
+  function setOnline(game, rows) {
+    if (!game || !Array.isArray(rows)) return;
+    onlineCache[game] = mergeRows(onlineCache[game], rows);
+  }
+
   /* Один раз на устройство переносим локальные рекорды в онлайн:
      сервер сам оставит лучший результат по каждому нику. */
   function syncLocal(game, onlineRows) {
@@ -134,7 +165,7 @@
     })).then(function (results) {
       const ok = results.filter(function (r) { return r && r.ok && Array.isArray(r.scores); });
       if (!ok.length) return;
-      onlineCache[game] = ok[ok.length - 1].scores;
+      setOnline(game, ok[ok.length - 1].scores);
       markMigrated(game);
       try {
         window.dispatchEvent(new CustomEvent('lb:update', { detail: { game: game, online: true } }));
@@ -150,7 +181,7 @@
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (data) {
         if (data && data.ok && Array.isArray(data.scores)) {
-          onlineCache[game] = data.scores;
+          setOnline(game, data.scores);
           try {
             window.dispatchEvent(new CustomEvent('lb:update', { detail: { game: game, online: true } }));
           } catch (e) {}
@@ -184,7 +215,7 @@
     if (ONLINE_URL) {
       postScore(game, cleanName, rounded).then(function (data) {
         if (data && data.ok && Array.isArray(data.scores)) {
-          onlineCache[game] = data.scores;
+          setOnline(game, data.scores);
           try {
             window.dispatchEvent(new CustomEvent('lb:update', { detail: { game: game, online: true } }));
           } catch (e) {}
@@ -295,7 +326,9 @@
         (rows.length
           ? rows.map(function (r, i) {
               return '<div class="lb-row"><span class="lb-pos">' + (i + 1) + '</span>' +
-                     '<a class="lb-name" href="' + window.lbProfileUrl(r.n, r.uid) + '" title="Открыть профиль">' + escapeHtml(r.n) + '</a>' +
+                     '<a class="lb-name" href="' + window.lbProfileUrl(r.n, r.uid) + '" title="Открыть профиль">' +
+                     (r.a ? '<img src="' + escapeHtml(r.a) + '" alt="" loading="lazy" style="width:20px;height:20px;border-radius:6px;object-fit:cover;vertical-align:-5px;margin-right:6px">' : '') +
+                     escapeHtml(r.n) + '</a>' +
                      '<b class="lb-score">' + r.s + '</b></div>';
             }).join('')
           : '<div class="lb-empty">пока пусто</div>');

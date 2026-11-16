@@ -140,6 +140,7 @@
 
     save(state);
     checkAchievements();
+    schedulePush();
   }
 
   function recordScore(game, name, score) {    const state = load();
@@ -147,6 +148,7 @@
     if (Number.isFinite(value) && value > bestOf(state, game)) {
       state.best[game] = value;
       save(state);
+      schedulePush();
     }
     if (!playerName() && name) {
       try { localStorage.setItem('player_name', String(name).trim().slice(0, 16)); } catch (e) {}
@@ -161,6 +163,7 @@
     if (state.secrets[id]) return false;
     state.secrets[id] = Date.now();
     save(state);
+    schedulePush();
     checkAchievements(true);
     return true;
   }
@@ -217,40 +220,53 @@
     });
     if (changed) {
       save(state);
+      schedulePush();
       window.dispatchEvent(new CustomEvent('arcade:profile'));
       if (announce !== false) opened.forEach(showToast);
     }
     return opened;
   }
 
-  /* Онлайн-достижения: проверяем по данным воркера. */
+  /* Онлайн-достижения: проверяем по данным воркера.
+     Если вошёл через Discord — сверяем по uid, а не по нику. */
   let onlineChecked = false;
   function checkOnline() {
     if (onlineChecked || typeof window.lbFetchOnline !== 'function') return Promise.resolve();
     onlineChecked = true;
     const name = playerName();
-    if (!name) return Promise.resolve();
-    const needle = name.toLowerCase();
+    const auth = window.lbAuth;
+    const mePromise = (auth && auth.token() && typeof auth.me === 'function')
+      ? auth.me().catch(function () { return null; })
+      : Promise.resolve(null);
 
-    return Promise.all(GAME_KEYS.map(function (g) {
-      return window.lbFetchOnline(g).then(function (data) {
-        return { game: g, rows: data && data.ok && Array.isArray(data.scores) ? data.scores : [] };
-      }).catch(function () { return { game: g, rows: [] }; });
-    })).then(function (results) {
-      const state = load();
-      let changed = false;
-      let inTable = false;
-      let first = false;
+    return mePromise.then(function (me) {
+      const uid = me && me.id ? String(me.id) : '';
+      const needle = name ? name.toLowerCase() : '';
+      if (!uid && !needle) return null;
 
-      results.forEach(function (r) {
-        const idx = r.rows.findIndex(function (row) { return String(row.n || '').toLowerCase() === needle; });
-        if (idx >= 0) inTable = true;
-        if (idx === 0) first = true;
+      return Promise.all(GAME_KEYS.map(function (g) {
+        return window.lbFetchOnline(g).then(function (data) {
+          return { game: g, rows: data && data.ok && Array.isArray(data.scores) ? data.scores : [] };
+        }).catch(function () { return { game: g, rows: [] }; });
+      })).then(function (results) {
+        const state = load();
+        let changed = false;
+        let inTable = false;
+        let first = false;
+
+        results.forEach(function (r) {
+          const idx = r.rows.findIndex(function (row) {
+            if (uid && row.uid) return String(row.uid) === uid;
+            return !!needle && String(row.n || '').toLowerCase() === needle;
+          });
+          if (idx >= 0) inTable = true;
+          if (idx === 0) first = true;
+        });
+
+        if (inTable && !state.unlocked.online) { state.unlocked.online = Date.now(); changed = true; showToast(findBadge('online')); }
+        if (first && !state.unlocked.top1) { state.unlocked.top1 = Date.now(); changed = true; showToast(findBadge('top1')); }
+        if (changed) { save(state); schedulePush(); window.dispatchEvent(new CustomEvent('arcade:profile')); }
       });
-
-      if (inTable && !state.unlocked.online) { state.unlocked.online = Date.now(); changed = true; showToast(findBadge('online')); }
-      if (first && !state.unlocked.top1) { state.unlocked.top1 = Date.now(); changed = true; showToast(findBadge('top1')); }
-      if (changed) { save(state); window.dispatchEvent(new CustomEvent('arcade:profile')); }
     });
   }
 
@@ -606,6 +622,80 @@
     document.head.appendChild(style);
   }
 
+  /* ---------- синхронизация профиля через Discord ---------- */
+  const SYNC_URL = 'https://brickyard-leaderboard.brickyard-leaderboard.workers.dev';
+
+  function mergeStates(a, b) {
+    const out = {
+      plays: {}, best: {}, days: {}, unlocked: {}, secrets: {},
+      night: (a && a.night) || (b && b.night) ? 1 : 0
+    };
+    [a, b].forEach(function (s) {
+      if (!s || typeof s !== 'object') return;
+      ['plays', 'best', 'unlocked', 'secrets'].forEach(function (field) {
+        const src = s[field];
+        if (!src || typeof src !== 'object') return;
+        Object.keys(src).forEach(function (k) {
+          const v = Number(src[k]) || 0;
+          if (v > 0) out[field][k] = Math.max(out[field][k] || 0, v);
+        });
+      });
+      if (s.days && typeof s.days === 'object') {
+        Object.keys(s.days).forEach(function (d) { out.days[d] = 1; });
+      }
+    });
+    return out;
+  }
+
+  function authHeaders() {
+    const auth = window.lbAuth;
+    if (!auth || typeof auth.token !== 'function') return null;
+    const token = auth.token();
+    if (!token) return null;
+    return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
+  }
+
+  let pushTimer = null;
+  function schedulePush() {
+    if (!authHeaders()) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushNow, 1200);
+  }
+
+  function pushNow() {
+    pushTimer = null;
+    const headers = authHeaders();
+    if (!headers) return;
+    fetch(SYNC_URL + '/profile/state', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ state: load() })
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.ok || !data.state) return;
+        const merged = mergeStates(load(), data.state);
+        save(merged);
+        window.dispatchEvent(new CustomEvent('arcade:profile'));
+      })
+      .catch(function () {});
+  }
+
+  function syncFromServer() {
+    const headers = authHeaders();
+    if (!headers) return Promise.resolve();
+    return fetch(SYNC_URL + '/profile/state', { headers: headers, cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.ok) return;
+        const merged = mergeStates(load(), data.state);
+        save(merged);
+        window.dispatchEvent(new CustomEvent('arcade:profile'));
+        pushNow();
+      })
+      .catch(function () {});
+  }
+
   function init() {
     installToastStyles();
     recordVisit();
@@ -613,6 +703,7 @@
     renderCard();
     renderProfilePage();
     if (document.getElementById('profileCard') || document.getElementById('profileRoot')) checkOnline();
+    syncFromServer();
 
     if (typeof window.lbSubmit === 'function' && !window.lbSubmit.__arcadeWrapped) {
       const original = window.lbSubmit;

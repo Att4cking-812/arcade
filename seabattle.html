@@ -196,6 +196,8 @@
   .lg.hit{background:#ff3b6b; box-shadow:0 0 8px rgba(255,59,107,.5)}
   .lg.miss{background:#405766; border-radius:50%}
   .lg.sunk{background:#7a1628; box-shadow:inset 0 0 0 1px #ff6b8e, 0 0 8px rgba(255,59,107,.3)}
+  .lg.dead{background:rgba(90,114,132,.18); box-shadow:inset 0 0 0 1px rgba(90,114,132,.4); position:relative}
+  .lg.dead::after{content:""; position:absolute; left:50%; top:50%; width:5px; height:5px; border-radius:50%; background:rgba(122,145,160,.7); transform:translate(-50%,-50%)}
 
   /* ── поля ─────────────────────────────────────── */
   .arena{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start}
@@ -277,6 +279,12 @@
     content:""; position:absolute; left:50%; top:50%; width:20%; height:20%;
     border-radius:50%; background:#5a7284; transform:translate(-50%,-50%);
     box-shadow:0 0 6px rgba(0,212,255,.25);
+  }
+  /* мёртвая зона вокруг потопленного корабля */
+  .cell.dead{background:rgba(90,114,132,.10); box-shadow:inset 0 0 0 1px rgba(90,114,132,.22)}
+  .cell.dead::before{
+    content:""; position:absolute; left:50%; top:50%; width:14%; height:14%;
+    border-radius:50%; background:rgba(122,145,160,.55); transform:translate(-50%,-50%);
   }
   .cell.hit, .cell.sunk{background:linear-gradient(150deg,#5a1825,#351019)}
   .cell.hit{box-shadow:inset 0 0 0 1px rgba(255,59,107,.5), 0 0 10px rgba(255,59,107,.15)}
@@ -519,6 +527,7 @@
       <span class="legend-item"><i class="lg hit"></i>попадание</span>
       <span class="legend-item"><i class="lg miss"></i>мимо</span>
       <span class="legend-item"><i class="lg sunk"></i>потоплен</span>
+    <span class="legend-item"><i class="lg dead"></i>мёртвая зона</span>
     </div>
   </section>
 
@@ -692,7 +701,7 @@ function randInt(n) {
 
 function emptyGrid() {
   return Array.from({ length: SIZE }, () =>
-    Array.from({ length: SIZE }, () => ({ ship: null, shot: false, sunk: false }))
+    Array.from({ length: SIZE }, () => ({ ship: null, shot: false, sunk: false, dead: false }))
   );
 }
 
@@ -863,6 +872,7 @@ function cellLabel(side, x, y) {
     if (st.sunk) return base + ' — твой корабль потоплен';
     if (st.shot && st.ship) return base + ' — попадание';
     if (st.shot) return base + ' — мимо';
+    if (st.dead) return base + ' — мёртвая зона';
     if (st.ship) return base + ' — твой корабль';
     return base + ' — вода';
   }
@@ -870,6 +880,7 @@ function cellLabel(side, x, y) {
   if (st.sunk) return base + ' — корабль противника потоплен';
   if (st.shot && st.ship) return base + ' — попадание';
   if (st.shot) return base + ' — мимо';
+  if (st.dead) return base + ' — мёртвая зона';
   if (phase === 'over' && st.ship) return base + ' — корабль противника';
   return base + ' — вода';
 }
@@ -883,6 +894,7 @@ function paintPlayer() {
       if (st.ship) cls += ' ship';
       if (st.shot && st.ship) cls += ' hit';
       if (st.shot && !st.ship) cls += ' miss';
+      if (st.dead && !st.shot) cls += ' dead';
       if (st.sunk) cls += ' sunk';
       el.className = cls;
       el.disabled = phase !== 'placement';
@@ -900,6 +912,7 @@ function paintEnemy() {
       let cls = 'cell';
       if (st.shot && st.ship) cls += ' hit';
       if (st.shot && !st.ship) cls += ' miss';
+      if (st.dead && !st.shot) cls += ' dead';
       if (st.sunk) cls += ' sunk';
       if (phase === 'over' && st.ship && !st.shot) cls += ' reveal';
       el.className = cls;
@@ -1390,18 +1403,18 @@ function addAiNeighbours(x, y) {
   dirs.forEach((d) => {
     const nx = x + d[0];
     const ny = y + d[1];
-    if (!inBounds(nx, ny) || playerGrid[ny][nx].shot) return;
+    if (!inBounds(nx, ny) || playerGrid[ny][nx].shot || playerGrid[ny][nx].dead) return;
     if (aiQueue.some((p) => p.x === nx && p.y === ny)) return;
     aiQueue.push({ x: nx, y: ny });
   });
 }
 
 function chooseAiTarget() {
-  aiQueue = aiQueue.filter((p) => !playerGrid[p.y][p.x].shot);
+  aiQueue = aiQueue.filter((p) => !playerGrid[p.y][p.x].shot && !playerGrid[p.y][p.x].dead);
 
   while (aiQueue.length) {
     const p = aiQueue.shift();
-    if (!playerGrid[p.y][p.x].shot) return p;
+    if (!playerGrid[p.y][p.x].shot && !playerGrid[p.y][p.x].dead) return p;
   }
 
   const parity = [];
@@ -1409,7 +1422,7 @@ function chooseAiTarget() {
 
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
-      if (playerGrid[y][x].shot) continue;
+      if (playerGrid[y][x].shot || playerGrid[y][x].dead) continue;
       const p = { x: x, y: y };
       all.push(p);
       if ((x + y) % 2 === 0) parity.push(p);
@@ -1419,6 +1432,22 @@ function chooseAiTarget() {
   const pool = parity.length ? parity : all;
   if (!pool.length) return null;
   return pool[randInt(pool.length)];
+}
+
+function markDeadZone(grid, shipCells) {
+  shipCells.forEach((c) => {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = c.x + dx;
+        const ny = c.y + dy;
+        if (!inBounds(nx, ny)) continue;
+        const cell = grid[ny][nx];
+        if (cell.ship || cell.shot) continue;
+        cell.dead = true;
+      }
+    }
+  });
 }
 
 function aiFire() {
@@ -1448,6 +1477,7 @@ function aiFire() {
     if (cell.ship.hits >= cell.ship.size) {
       cell.ship.sunk = true;
       cell.ship.cells.forEach((c) => { playerGrid[c.y][c.x].sunk = true; });
+      markDeadZone(playerGrid, cell.ship.cells);
       aiQueue = [];
       shotClass = 'flash-sunk';
       sfxSunk();
@@ -1493,6 +1523,10 @@ function playerShoot(x, y) {
     showToast('Сюда уже стреляли');
     return;
   }
+  if (cell.dead) {
+    showToast('Мёртвая зона — корабля тут быть не может');
+    return;
+  }
 
   ensureAudio();
   cell.shot = true;
@@ -1509,6 +1543,7 @@ function playerShoot(x, y) {
     if (cell.ship.hits >= cell.ship.size) {
       cell.ship.sunk = true;
       cell.ship.cells.forEach((c) => { enemyGrid[c.y][c.x].sunk = true; });
+      markDeadZone(enemyGrid, cell.ship.cells);
       shotClass = 'flash-sunk';
       sfxSunk();
       setStatus('Корабль потоплен! Ты стреляешь снова.');
@@ -1788,8 +1823,8 @@ window.addEventListener('keydown', (e) => {
   resetGame();
 })();
 </script>
-<script src="leaderboard.js?v=14"></script>
-<script src="profile.js?v=4"></script>
+<script src="leaderboard.js?v=15"></script>
+<script src="profile.js?v=5"></script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }</script>
 </body>
 </html>

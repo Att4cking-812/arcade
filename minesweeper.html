@@ -47,6 +47,9 @@
   .cell.open:hover{background:#0d141b}
   .cell.mine{background:#3a1018; color:#ff8ba6}
   .cell.flag{color:var(--gold); font-size:15px}
+  .cell.zone{box-shadow:inset 0 0 0 2px rgba(57,255,136,.55); background:rgba(57,255,136,.08)}
+  .cell.zone.open{background:rgba(57,255,136,.06)}
+  .cell.zone-src{box-shadow:inset 0 0 0 2px rgba(0,212,255,.7)}
   .cell.wrong{background:#3a1018; color:#ff8ba6}
   .n1{color:#6fb3ff} .n2{color:#59f28f} .n3{color:#ff8ba6} .n4{color:#c58bff}
   .n5{color:#ffb86b} .n6{color:#5ff2e0} .n7{color:#f0f0f0} .n8{color:#9aa7b4}
@@ -114,6 +117,9 @@
     </div>
     <button class="ui primary" id="restart">Заново</button>
   </div>
+  <div class="btns" style="margin-top:10px">
+    <button class="ui" id="flagMode">🚩 Режим флажка: выкл</button>
+  </div>
 
   <div class="hint" id="hint">Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок</div>
 </div>
@@ -166,6 +172,8 @@ let flags = 0;
 let opened = 0;
 let timer = 0;
 let timerId = null;
+let flagMode = false;
+try { flagMode = localStorage.getItem('mines_flag_mode') === '1'; } catch (e) {}
 
 const boardEl = document.getElementById('board');
 const openedEl = document.getElementById('opened');
@@ -278,9 +286,9 @@ function updateHint() {
   } else if (mode === 'normal') {
     const p = NORMAL[densityKey];
     hintEl.textContent = 'Обычное поле ' + p.cols + '×' + p.rows + ' · ' + p.mines +
-      ' мин · не расширяется · ЛКМ — открыть · ПКМ — флажок';
+      ' мин · не расширяется · ЛКМ — открыть · ПКМ — флажок · ПКМ по цифре — её зона';
   } else {
-    hintEl.textContent = 'Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок';
+    hintEl.textContent = 'Бесконечное поле: подходишь к краю — появляются новые клетки · ЛКМ — открыть · ПКМ — флажок · ПКМ по цифре — её зона';
   }
 }
 
@@ -552,25 +560,72 @@ function finish(title, text) {
 }
 
 /* ---------- события ---------- */
+const flagModeBtn = document.getElementById('flagMode');
+function syncFlagMode() {
+  flagModeBtn.textContent = '🚩 Режим флажка: ' + (flagMode ? 'вкл' : 'выкл');
+  flagModeBtn.classList.toggle('primary', flagMode);
+}
+syncFlagMode();
+flagModeBtn.addEventListener('click', function () {
+  flagMode = !flagMode;
+  try { localStorage.setItem('mines_flag_mode', flagMode ? '1' : '0'); } catch (e) {}
+  syncFlagMode();
+});
+
+let zoneTimer = null;
+function clearZone() {
+  Array.prototype.forEach.call(boardEl.querySelectorAll('.zone, .zone-src'), function (el) {
+    el.classList.remove('zone', 'zone-src');
+  });
+}
+/* ПКМ по цифре — подсветить клетки, которые она считает. */
+function highlightZone(x, y) {
+  clearZone();
+  if (zoneTimer) clearTimeout(zoneTimer);
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const b = boardEl.querySelector('.cell[data-x="' + (x + dx) + '"][data-y="' + (y + dy) + '"]');
+      if (b) b.classList.add('zone');
+    }
+  }
+  const src = boardEl.querySelector('.cell[data-x="' + x + '"][data-y="' + y + '"]');
+  if (src) src.classList.add('zone-src');
+  zoneTimer = setTimeout(clearZone, 1600);
+}
+
+function cellIsNumber(b) {
+  return b.classList.contains('open') && b.textContent && !b.classList.contains('mine');
+}
+
 boardEl.addEventListener('click', function (e) {
   const b = e.target.closest('.cell');
   if (!b) return;
-  openCell(+b.dataset.x, +b.dataset.y);
+  if (suppressClick) { suppressClick = false; return; }
+  const x = +b.dataset.x, y = +b.dataset.y;
+  if (flagMode && !b.classList.contains('open')) { toggleFlag(x, y); return; }
+  openCell(x, y);
 });
 
 boardEl.addEventListener('contextmenu', function (e) {
   const b = e.target.closest('.cell');
   if (!b) return;
   e.preventDefault();
-  toggleFlag(+b.dataset.x, +b.dataset.y);
+  const x = +b.dataset.x, y = +b.dataset.y;
+  if (cellIsNumber(b)) highlightZone(x, y);
+  else toggleFlag(x, y);
 });
 
 let pressTimer = null;
+let suppressClick = false;
 boardEl.addEventListener('touchstart', function (e) {
   const b = e.target.closest('.cell');
   if (!b) return;
+  const x = +b.dataset.x, y = +b.dataset.y;
   pressTimer = setTimeout(function () {
-    toggleFlag(+b.dataset.x, +b.dataset.y);
+    if (cellIsNumber(b)) highlightZone(x, y);
+    else toggleFlag(x, y);
+    suppressClick = true;
     pressTimer = null;
   }, 420);
 }, { passive: true });
@@ -634,8 +689,8 @@ if (params.has('secret')) {
   newGame();
 }
 </script>
-<script src="leaderboard.js?v=14"></script>
-<script src="profile.js?v=4"></script>
+<script src="leaderboard.js?v=15"></script>
+<script src="profile.js?v=5"></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}</script>
 </body>
 </html>
