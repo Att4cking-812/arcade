@@ -306,7 +306,13 @@
     return mePromise.then(function (me) {
       const uid = me && me.id ? String(me.id) : '';
       const needle = name ? name.toLowerCase() : '';
-      if (uid && OWNER_UIDS.indexOf(uid) >= 0) {
+      const handles = me
+        ? [me.global, me.name, me.username].filter(Boolean).map(function (x) { return String(x).toLowerCase(); })
+        : [];
+      const byHandle = handles.some(function (h) {
+        return OWNER_NAMES.some(function (x) { return h.indexOf(x) === 0; }) || OWNER_UIDS.indexOf(h) >= 0;
+      });
+      if ((uid && OWNER_UIDS.indexOf(uid) >= 0) || byHandle) {
         window.__arcadeOwner = true;
         try { if (localStorage.getItem('arcade_owner') !== '1') localStorage.setItem('arcade_owner', '1'); } catch (e) {}
         checkAchievements();
