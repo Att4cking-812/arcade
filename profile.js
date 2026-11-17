@@ -24,7 +24,20 @@
     { min: 120, name: 'Хранитель рекордов' }
   ];
 
+  /* Владелец аркады: лимитный значок, который больше никому не выдаётся. */
+  const OWNER_NAMES = ['шогнейне', 'шогнейн', 'shogneine', 'att4cking'];
+  const OWNER_UIDS = ['871732687923200042'];
+
+  function isOwnerAccount() {
+    try { if (localStorage.getItem('arcade_owner') === '1') return true; } catch (e) {}
+    if (window.__arcadeOwner === true) return true;
+    const name = playerName().toLowerCase();
+    if (name && OWNER_NAMES.some(function (x) { return name.indexOf(x) === 0; })) return true;
+    return false;
+  }
+
   const ACHIEVEMENTS = [
+    { id: 'owner', icon: '💠', title: 'Хозяин Брикьярда', desc: 'Лимитное достижение. Существует в единственном экземпляре — у того, кто собрал эту аркаду.', limited: true, test: function () { return isOwnerAccount(); } },
     { id: 'first', icon: '🎮', title: 'Первый шаг', desc: 'Запусти первую игру аркады.', test: function (s) { return totalPlays(s) >= 1; } },
     { id: 'all6', icon: '🎲', title: 'Шесть из шести', desc: 'Зайди в каждую из шести игр.', test: function (s) { return GAME_KEYS.every(function (g) { return (s.plays[g] || 0) > 0; }); } },
     { id: 'plays10', icon: '🔥', title: 'Разогрев', desc: 'Проведи 10 игровых сессий.', test: function (s) { return totalPlays(s) >= 10; } },
@@ -233,7 +246,7 @@
     toastBusy = true;
     const root = ensureToastRoot();
     const el = document.createElement('div');
-    el.className = 'arcade-toast';
+    el.className = 'arcade-toast' + (badge && badge.limited ? ' limited' : '');
     el.innerHTML = '<div class="arcade-toast-icon">' + badge.icon + '</div><div><div class="arcade-toast-kicker">Достижение открыто</div><div class="arcade-toast-title">' + escapeHtml(badge.title) + '</div><div class="arcade-toast-desc">' + escapeHtml(badge.desc) + '</div></div>';
     root.appendChild(el);
     requestAnimationFrame(function () { el.classList.add('show'); });
@@ -293,6 +306,11 @@
     return mePromise.then(function (me) {
       const uid = me && me.id ? String(me.id) : '';
       const needle = name ? name.toLowerCase() : '';
+      if (uid && OWNER_UIDS.indexOf(uid) >= 0) {
+        window.__arcadeOwner = true;
+        try { if (localStorage.getItem('arcade_owner') !== '1') localStorage.setItem('arcade_owner', '1'); } catch (e) {}
+        checkAchievements();
+      }
       if (!uid && !needle) return null;
 
       return Promise.all(GAME_KEYS.map(function (g) {
@@ -377,7 +395,7 @@
       dailyHtml(state) +
       '<div class="arcade-mini-badges">' +
         (latest.length
-          ? latest.map(function (b) { return '<span class="arcade-mini-badge" title="' + escapeHtml(b.desc) + '">' + b.icon + ' ' + escapeHtml(b.title) + '</span>'; }).join('')
+          ? latest.map(function (b) { return '<span class="arcade-mini-badge' + (b.limited ? ' limited' : '') + '" title="' + escapeHtml(b.desc) + '">' + b.icon + ' ' + escapeHtml(b.title) + '</span>'; }).join('')
           : '<span class="arcade-mini-empty">Пока пусто — сыграй первую игру и получи значок.</span>') +
       '</div>' +
       (window.lbAuth
@@ -789,9 +807,9 @@
 
     const badges = ACHIEVEMENTS.map(function (b) {
       const open = !!state.unlocked[b.id];
-      return '<div class="profile-badge' + (open ? ' open' : '') + '">' +
+      return '<div class="profile-badge' + (open ? ' open' : '') + (b.limited ? ' limited' : '') + '">' +
         '<div class="profile-badge-icon">' + (open ? b.icon : '🔒') + '</div>' +
-        '<div><div class="profile-badge-title">' + escapeHtml(b.title) + '</div>' +
+        '<div><div class="profile-badge-title">' + escapeHtml(b.title) + (b.limited ? '<span class="badge-limited-tag">LIMITED</span>' : '') + '</div>' +
         '<div class="profile-badge-desc">' + escapeHtml(b.desc) + '</div></div></div>';
     }).join('');
 
@@ -907,6 +925,14 @@
       '.arcade-mini-empty{font-size:12px; color:#7c8b9a; font-style:italic}',
       '.arcade-auth-hint{margin-top:12px; font-size:12px; color:#7c8b9a}',
       '.arcade-auth-hint a{color:#39ff88; text-decoration:none; border-bottom:1px dotted rgba(57,255,136,.4)}',
+      '.arcade-toast.limited{border-color:rgba(240,192,96,.75); background:linear-gradient(160deg, rgba(42,32,18,.98), rgba(12,10,9,.98)); box-shadow:0 18px 50px rgba(0,0,0,.6), 0 0 34px rgba(240,192,96,.22)}',
+      '.arcade-toast.limited .arcade-toast-kicker{color:#f0c060}',
+      '.arcade-toast.limited .arcade-toast-icon{filter:drop-shadow(0 0 12px rgba(240,192,96,.65))}',
+      '.profile-badge.limited{border-color:rgba(240,192,96,.5); background:linear-gradient(135deg, rgba(240,192,96,.10), rgba(255,107,157,.05)); box-shadow:0 0 0 1px rgba(240,192,96,.18) inset, 0 10px 30px rgba(0,0,0,.35)}',
+      '.profile-badge.limited.open{border-color:rgba(240,192,96,.8); box-shadow:0 0 26px rgba(240,192,96,.18), 0 0 0 1px rgba(240,192,96,.35) inset}',
+      '.profile-badge.limited .profile-badge-icon{filter:drop-shadow(0 0 10px rgba(240,192,96,.55))}',
+      '.badge-limited-tag{display:inline-block; margin-left:8px; font-size:9px; letter-spacing:1.4px; padding:2px 6px; border-radius:99px; color:#120e08; background:linear-gradient(90deg,#f0c060,#ff9ecb); font-weight:900; vertical-align:middle}',
+      '.arcade-mini-badge.limited{border-color:rgba(240,192,96,.6); color:#f7e6bf; background:linear-gradient(120deg, rgba(240,192,96,.16), rgba(255,107,157,.08))}',
       '@media (max-width:560px){.arcade-toast{max-width:100%}.arcade-profile{padding:18px}.arcade-card-link{width:100%; text-align:center}}'
     ].join('\n');
     document.head.appendChild(style);
